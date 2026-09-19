@@ -64,6 +64,67 @@ extension ButtonStyle where Self == EcoButtonStyle {
     static var ecoDestructive: EcoButtonStyle { EcoButtonStyle(kind: .destructive) }
 }
 
+// MARK: - Round button (Strava-style Record / Pause)
+
+struct EcoRoundButtonStyle: ButtonStyle {
+    var size: CGFloat = 88
+    var filled = true
+    var tint: Color = Eco.primary
+
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .font(.ecoTitleLarge)
+            .foregroundStyle(filled ? Eco.onPrimary : tint)
+            .frame(width: size, height: size)
+            .background(filled ? tint : Eco.surface, in: Circle())
+            .overlay(Circle().stroke(filled ? .clear : Eco.border, lineWidth: 1.5))
+            .scaleEffect(configuration.isPressed ? 0.94 : 1)
+            .animation(.easeOut(duration: 0.12), value: configuration.isPressed)
+    }
+}
+
+extension ButtonStyle where Self == EcoRoundButtonStyle {
+    static func ecoRound(size: CGFloat = 88, filled: Bool = true, tint: Color = Eco.primary) -> EcoRoundButtonStyle {
+        EcoRoundButtonStyle(size: size, filled: filled, tint: tint)
+    }
+}
+
+// MARK: - Metric (Strava-style: small caps label above a big number)
+
+struct EcoMetric: View {
+    enum Size { case regular, hero }
+
+    let label: String
+    let value: String
+    var unit: String? = nil
+    var size: Size = .regular
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 2) {
+            Text(label.uppercased())
+                .font(.ecoLabelSmall)
+                .tracking(0.8)
+                .foregroundStyle(Eco.textSecondary)
+            HStack(alignment: .lastTextBaseline, spacing: 4) {
+                Text(value)
+                    .font(size == .hero ? .ecoHero : .ecoStat)
+                    .monospacedDigit()
+                    .foregroundStyle(Eco.textPrimary)
+                    .minimumScaleFactor(0.5)
+                    .lineLimit(1)
+                if let unit {
+                    Text(unit)
+                        .font(.ecoLabelMedium)
+                        .foregroundStyle(Eco.textSecondary)
+                }
+            }
+        }
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(label)
+        .accessibilityValue("\(value) \(unit ?? "")")
+    }
+}
+
 // MARK: - Card
 
 struct EcoCardModifier: ViewModifier {

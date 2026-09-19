@@ -1,0 +1,4 @@
+// Copy to Local.xcconfig (git-ignored) and fill in your own values.
+// HealthKit, Live Activities and push need a real signing team on a physical device.
+DEVELOPMENT_TEAM = YOURTEAMID
+CODE_SIGN_STYLE = Automatic

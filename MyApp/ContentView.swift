@@ -1,6 +1,9 @@
 import SwiftUI
 
+/// Temporary launch harness for the Activity flow (Person 2 owns the real tab shell).
 struct ContentView: View {
+    @State private var flow: ActivityViewModel?
+
     var body: some View {
         VStack(spacing: Eco.Space.xl) {
             Spacer()
@@ -20,18 +23,27 @@ struct ContentView: View {
                     .foregroundStyle(Eco.textSecondary)
             }
 
-            HStack(spacing: Eco.Space.m) {
-                EcoStatTile(value: "5.2 km", label: "Distance", systemImage: "figure.walk")
-                EcoStatTile(value: "312", label: "kcal", systemImage: "flame.fill")
-            }
-
             Spacer()
 
-            Button("Start Plog") {}
-                .buttonStyle(.eco)
+            VStack(spacing: Eco.Space.m) {
+                if let cleanUp = FakeData.cleanUps.first {
+                    Button("Start Clean-Up: \(cleanUp.title)") {
+                        flow = AppEnvironment.makeActivityViewModel(context: .cleanUp(cleanUp))
+                    }
+                    .buttonStyle(.eco)
+                }
+                Button("Start free activity") {
+                    flow = AppEnvironment.makeActivityViewModel(context: .free)
+                }
+                .buttonStyle(.ecoSecondary)
+            }
         }
         .padding(Eco.Space.l)
         .ecoScreenBackground()
+        .fullScreenCover(item: $flow) { viewModel in
+            ActivityFlowView(viewModel: viewModel) { flow = nil }
+                .ecoTheme()
+        }
     }
 }
 

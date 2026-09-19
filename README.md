@@ -46,9 +46,12 @@ open MyApp.xcodeproj
 ```
 MyApp/
   Core/DesignSystem/   Dark green theme: Eco.* colors, .eco* fonts, buttons, cards, chips
-  Core/                Models, repository protocols, mocks (planned)
-  Features/            Activity, Camera, Reel, Spot, Map, Feed, Profile, Share (planned)
+  Core/                Models, repository protocols, fake data, AppEnvironment (fake vs live switch)
+  Features/Activity/   Views/ ViewModels/ Services/  (MVVM: all logic in view models)
+  Features/            Camera, Reel, Spot, Map, Feed, Profile, Share (planned)
   Services/            Backend, Notifications (planned)
+EcoPlogWidgets/        Live Activity / Dynamic Island
+MyAppTests/            View-model unit tests
 docs/TEAM_PLAN.md      Product structure, two-person split, milestones, risks
 ```
 
@@ -62,7 +65,7 @@ Button("Start Activity") { }.buttonStyle(.eco)
 EcoStatTile(value: "312", label: "kcal", systemImage: "flame.fill")
 ```
 
-Open the `Design system` preview in `EcoComponents.swift` to see every component. Poppins/Inter fonts are optional; without the font files the system font is used.
+Open the `Design system` preview in `EcoComponents.swift` to see every component. Fonts: Inter (bundled) for body/labels and Boathouse for headings (add the font files to `MyApp/Resources/Fonts` and `UIAppFonts`; until then headings use the system font).
 
 ## Team & roadmap
 
@@ -70,4 +73,5 @@ Two developers: **P1 Activity & Reel** (tracking, HealthKit, Live Activity, ghos
 
 ## Status
 
-Scaffold + design system done (M0 in progress). Feature work has not started.
+M0 done. Activity flow (record → impact log → summary) works end to end on **fake data** (simulated GPS walk, fake heart rate/steps). Architecture is strict MVVM; switch to live sensors with `AppEnvironment.useFakeData`.
+Next: live HealthKit, persistence/history, ghost camera, Reel, Live Activity wiring.

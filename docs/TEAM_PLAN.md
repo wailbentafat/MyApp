@@ -94,12 +94,18 @@ Territory heatmap with decay, Apple Watch companion, "Start Plog" App Intent / A
        Backend/          P2
        Notifications/    P2
    ```
-2. **Contracts first, mocks always.** Day 0: models + repository protocols + in-memory mocks in `Core/`. Everyone works on mocks until the backend is live.
-3. **Dependencies via SwiftUI `Environment`** (`@Environment(\.cleanUpRepository)`).
-4. **Swift 6 vs CoreLocation/HealthKit delegates**: isolate managers with `@MainActor`, or drop to language mode 5 for speed (recommended for a hackathon).
-5. **Stop committing `MyApp.xcodeproj`**: add to `.gitignore`, `git rm -r --cached MyApp.xcodeproj`, run `xcodegen` after pulling. Per-dev signing via an untracked `Local.xcconfig`.
-6. **Git**: protected `main`, branches `p1/…` / `p2/…`, squash-merge PRs, `Core/` changes reviewed by the other person, merge at least twice a day.
-7. **Design system is done** (`Core/DesignSystem/`): use `Eco.*` colors, `.eco*` fonts, `.eco` button styles, `.ecoCard()`. No hard-coded colors in features.
+2. **Contracts first, fake data first.** Day 0: models + repository/service protocols + fake implementations (`Core/Fake/`). Everyone builds against fake data (sample Clean-Ups, sample activities, a simulated GPS walk, fake heart rate) until the real backend and sensors are plugged in.
+3. **MVVM, strictly.** Each feature folder has `Views/`, `ViewModels/`, `Services/`.
+   - **Model**: plain `Codable` structs in `Core/Models` (no logic beyond trivial computed properties).
+   - **View**: SwiftUI only: layout, bindings, calls to view-model intents. No business logic, no framework managers.
+   - **ViewModel**: `@Observable @MainActor final class`. **All business logic lives here**: state machines, filtering, calculations (distance, pace, calories), validation, display formatting, orchestration of services and repositories.
+   - **Services**: thin protocol wrappers around system frameworks (`LocationProviding`, `HealthProviding`, `PedometerProviding`, `CameraProviding`), each with a `Fake…` and a `Live…` implementation, injected into the view model's initialiser. They hold no business rules, so view models are unit-testable with fakes.
+4. **Dependencies via SwiftUI `Environment`** for repositories (`@Environment(\.cleanUpRepository)`); view models receive them through their initialiser.
+5. **UI reference: Strava.** Feed cards (avatar, title, stat row, route map, kudos), a big Record button and live stat screen, activity summary with map + stat grid, stat-sticker share cards. Restyled with the EcoPlog dark green design system.
+6. **Swift 6 vs CoreLocation/HealthKit delegates**: isolate managers with `@MainActor`, or drop to language mode 5 for speed (recommended for a hackathon).
+7. **Stop committing `MyApp.xcodeproj`**: add to `.gitignore`, `git rm -r --cached MyApp.xcodeproj`, run `xcodegen` after pulling. Per-dev signing via an untracked `Local.xcconfig`.
+8. **Git**: protected `main`, branches `p1/…` / `p2/…`, squash-merge PRs, `Core/` changes reviewed by the other person, merge at least twice a day.
+9. **Design system is done** (`Core/DesignSystem/`): use `Eco.*` colors, `.eco*` fonts, `.eco` button styles, `.ecoCard()`. No hard-coded colors in features.
 
 ## 6. Day-0 shared foundation (~half a day, pair up)
 | Task | Who |
