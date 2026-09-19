@@ -47,7 +47,7 @@ struct CleanUpMapView: View {
                 Button {
                     Task { await centerOnMe() }
                 } label: {
-                    Image(systemName: "location.fill")
+                    EcoSymbol("location.fill")
                 }
             }
         }
@@ -103,11 +103,12 @@ private struct CleanUpPin: View {
     let status: CleanUpStatus
 
     var body: some View {
-        Image(systemName: "mappin.circle.fill")
-            .font(.title)
-            .symbolRenderingMode(.palette)
-            .foregroundStyle(.white, tint)
-            .shadow(radius: 2)
+        ZStack {
+            Circle().fill(tint).frame(width: 36, height: 36)
+            EcoSymbol("leaf.fill", size: 18).foregroundStyle(Eco.onPrimary)
+        }
+        .overlay(Circle().stroke(.white, lineWidth: 2))
+        .shadow(radius: 2)
     }
 
     private var tint: Color {

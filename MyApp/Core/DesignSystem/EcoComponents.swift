@@ -37,7 +37,7 @@ struct EcoButtonStyle: ButtonStyle {
             .overlay {
                 if kind == .secondary {
                     RoundedRectangle(cornerRadius: Eco.Radius.button)
-                        .stroke(Eco.primary, lineWidth: 1.5)
+                        .stroke(Eco.buttonFill, lineWidth: 1.5)
                 }
             }
             .opacity(isEnabled ? (configuration.isPressed ? 0.85 : 1) : 0.45)
@@ -46,12 +46,16 @@ struct EcoButtonStyle: ButtonStyle {
     }
 
     private var foreground: Color {
-        kind == .secondary ? Eco.primary : Eco.onPrimary
+        switch kind {
+        case .primary: Eco.onButton
+        case .secondary: Eco.buttonFill
+        case .destructive: .white
+        }
     }
 
     private var background: Color {
         switch kind {
-        case .primary: Eco.primary
+        case .primary: Eco.buttonFill
         case .secondary: .clear
         case .destructive: Eco.error
         }
@@ -69,12 +73,12 @@ extension ButtonStyle where Self == EcoButtonStyle {
 struct EcoRoundButtonStyle: ButtonStyle {
     var size: CGFloat = 88
     var filled = true
-    var tint: Color = Eco.primary
+    var tint: Color = Eco.buttonFill
 
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
             .font(.ecoTitleLarge)
-            .foregroundStyle(filled ? Eco.onPrimary : tint)
+            .foregroundStyle(filled ? Eco.onButton : tint)
             .frame(width: size, height: size)
             .background(filled ? tint : Eco.surface, in: Circle())
             .overlay(Circle().stroke(filled ? .clear : Eco.border, lineWidth: 1.5))
@@ -84,7 +88,7 @@ struct EcoRoundButtonStyle: ButtonStyle {
 }
 
 extension ButtonStyle where Self == EcoRoundButtonStyle {
-    static func ecoRound(size: CGFloat = 88, filled: Bool = true, tint: Color = Eco.primary) -> EcoRoundButtonStyle {
+    static func ecoRound(size: CGFloat = 88, filled: Bool = true, tint: Color = Eco.buttonFill) -> EcoRoundButtonStyle {
         EcoRoundButtonStyle(size: size, filled: filled, tint: tint)
     }
 }
@@ -175,11 +179,10 @@ struct EcoStatTile: View {
     var body: some View {
         VStack(alignment: .leading, spacing: Eco.Space.xs) {
             if let systemImage {
-                Image(systemName: systemImage)
-                    .font(.ecoLabelMedium)
-                    .foregroundStyle(Eco.primary)
-                    .frame(width: 28, height: 28)
-                    .background(Eco.selected, in: Circle())
+                EcoSymbol(systemImage, size: 16)
+                    .foregroundStyle(Eco.textPrimary)
+                    .frame(width: 32, height: 32)
+                    .background(Eco.surfaceRaised, in: Circle())
             }
             Text(value)
                 .font(.ecoStat)
@@ -203,9 +206,10 @@ struct EcoChip: View {
 
     var body: some View {
         HStack(spacing: Eco.Space.xs) {
-            if let systemImage { Image(systemName: systemImage) }
-            Text(title)
+            if let systemImage { EcoSymbol(systemImage, size: 14) }
+            Text(title).lineLimit(1)
         }
+        .fixedSize()
         .font(.ecoLabelMedium)
         .foregroundStyle(isSelected ? Eco.highlight : Eco.textSecondary)
         .padding(.horizontal, Eco.Space.m)
@@ -241,7 +245,7 @@ struct EcoSectionHeader: View {
 #Preview("Design system") {
     ScrollView {
         VStack(alignment: .leading, spacing: Eco.Space.xl) {
-            Text("EcoPlog").font(.ecoDisplayLarge).foregroundStyle(Eco.textPrimary)
+            Text(AppInfo.name).font(.ecoDisplayLarge).foregroundStyle(Eco.textPrimary)
             Text("Turn every run into a cleanup.").font(.ecoBodyLarge)
 
             HStack {
@@ -267,4 +271,78 @@ struct EcoSectionHeader: View {
         .padding(Eco.Space.l)
     }
     .ecoTheme()
+}
+
+// MARK: - Avatar (initials, no empty placeholder images)
+
+struct EcoAvatar: View {
+    let name: String
+    var size: CGFloat = 40
+
+    private static let tints: [Color] = [
+        EcoPalette.brand.s500, EcoPalette.info.s500, EcoPalette.warning.s400,
+        EcoPalette.success.s400, EcoPalette.error.s400, EcoPalette.brand.s700,
+    ]
+
+    private var initials: String {
+        let letters = name.split(separator: " ").prefix(2).compactMap(\.first)
+        return String(letters).uppercased()
+    }
+
+    private var tint: Color {
+        Self.tints[abs(name.unicodeScalars.reduce(0) { $0 &+ Int($1.value) }) % Self.tints.count]
+    }
+
+    var body: some View {
+        Text(initials)
+            .font(.system(size: size * 0.38, weight: .semibold))
+            .foregroundStyle(Eco.onPrimary)
+            .frame(width: size, height: size)
+            .background(tint, in: Circle())
+            .accessibilityHidden(true)
+    }
+}
+
+// MARK: - Calendar strip (Clean-Ups tab)
+
+struct EcoCalendarDay: Identifiable {
+    let date: Date
+    let eventCount: Int
+    var id: Date { date }
+}
+
+/// Horizontal strip of days with a dot under days that have Clean-Ups; the selected day is a white pill.
+struct EcoCalendarStrip: View {
+    let days: [EcoCalendarDay]
+    let selected: Date?
+    var onSelect: (Date) -> Void
+
+    var body: some View {
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: Eco.Space.s) {
+                ForEach(days) { day in
+                    let isSelected = selected.map { Calendar.current.isDate($0, inSameDayAs: day.date) } ?? false
+                    Button { onSelect(day.date) } label: {
+                        VStack(spacing: 6) {
+                            Text(day.date.formatted(.dateTime.weekday(.narrow)))
+                                .font(.ecoLabelSmall)
+                                .foregroundStyle(isSelected ? Eco.onButton.opacity(0.7) : Eco.textSecondary)
+                            Text(day.date.formatted(.dateTime.day()))
+                                .font(.ecoTitleLarge)
+                                .foregroundStyle(isSelected ? Eco.onButton : Eco.textPrimary)
+                            Circle()
+                                .fill(day.eventCount > 0 ? (isSelected ? Eco.onButton : Eco.primary) : .clear)
+                                .frame(width: 5, height: 5)
+                        }
+                        .frame(width: 46, height: 72)
+                        .background(isSelected ? Eco.buttonFill : Eco.surface, in: RoundedRectangle(cornerRadius: 23))
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityLabel(day.date.formatted(date: .complete, time: .omitted))
+                    .accessibilityValue(day.eventCount == 0 ? "No Clean-Ups" : "\(day.eventCount) Clean-Ups")
+                }
+            }
+            .padding(.horizontal, Eco.Space.l)
+        }
+    }
 }

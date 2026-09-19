@@ -51,7 +51,7 @@ struct FeedView: View {
         _ = await shareService.shareToInstagramStory(
             image: image,
             videoURL: nil,
-            caption: "\(post.cleanUpTitle) — \(post.bags) bags, \(String(format: "%.1f", post.distanceKm)) km with EcoPlog 🌱"
+            caption: "\(post.cleanUpTitle) — \(post.bags) bags, \(String(format: "%.1f", post.distanceKm)) km with \(AppInfo.name) 🌱"
         )
     }
 }
@@ -64,7 +64,7 @@ private struct FeedPostCard: View {
     var body: some View {
         VStack(alignment: .leading, spacing: Eco.Space.m) {
             HStack(spacing: Eco.Space.s) {
-                Image(systemName: post.authorAvatarSystemImage)
+                EcoSymbol(post.authorAvatarSystemImage)
                     .font(.title3)
                     .foregroundStyle(Eco.primary)
                 VStack(alignment: .leading, spacing: 2) {
@@ -93,14 +93,14 @@ private struct FeedPostCard: View {
                 Button {
                     Task { await onKudos() }
                 } label: {
-                    Label("\(post.kudosCount)", systemImage: post.kudosGivenByMe ? "hand.thumbsup.fill" : "hand.thumbsup")
+                    EcoLabel("\(post.kudosCount)", systemImage: post.kudosGivenByMe ? "hand.thumbsup.fill" : "hand.thumbsup")
                 }
                 .foregroundStyle(post.kudosGivenByMe ? Eco.primary : Eco.textSecondary)
 
                 Button {
                     Task { await onShare() }
                 } label: {
-                    Label("Share", systemImage: "square.and.arrow.up")
+                    EcoLabel("Share", systemImage: "square.and.arrow.up")
                 }
                 .foregroundStyle(Eco.textSecondary)
 

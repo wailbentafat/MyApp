@@ -20,7 +20,7 @@ struct SpotResultView: View {
 
                 if let errorMessage {
                     VStack(alignment: .leading, spacing: Eco.Space.s) {
-                        Label(errorMessage, systemImage: "exclamationmark.triangle.fill")
+                        EcoLabel(errorMessage, systemImage: "exclamationmark.triangle.fill")
                             .font(.ecoBodyMedium)
                             .foregroundStyle(Eco.warning)
                         Text("Edit the fields below manually, or try again.")
@@ -32,7 +32,7 @@ struct SpotResultView: View {
                     .ecoCard()
                 } else {
                     HStack {
-                        Label("AI detected this", systemImage: "sparkles")
+                        EcoLabel("AI detected this", systemImage: "sparkles")
                             .font(.ecoLabelMedium)
                             .foregroundStyle(Eco.primary)
                         Spacer()
@@ -43,7 +43,7 @@ struct SpotResultView: View {
                 }
 
                 if let hazardMessage = result.hazard.message {
-                    Label(hazardMessage, systemImage: "exclamationmark.triangle.fill")
+                    EcoLabel(hazardMessage, systemImage: "exclamationmark.triangle.fill")
                         .font(.ecoBodyMedium)
                         .foregroundStyle(result.hazard == .hazardous ? Eco.error : Eco.warning)
                         .padding(Eco.Space.m)
@@ -87,7 +87,7 @@ struct SpotResultView: View {
                     VStack(spacing: Eco.Space.s) {
                         ForEach(result.gear) { item in
                             HStack {
-                                Image(systemName: item.systemImage)
+                                EcoSymbol(item.systemImage)
                                     .foregroundStyle(Eco.primary)
                                 Text(item.name)
                                     .font(.ecoBodyMedium)

@@ -22,6 +22,9 @@ struct MyAppApp: App {
                 .environment(\.notificationService, FakeNotificationService())
                 .environment(\.shareService, FakeShareService())
                 .ecoTheme()
+                .task {
+                    if DebugLaunch.autoSignIn { await appSession.signInWithApple() }
+                }
         }
     }
 }

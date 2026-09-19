@@ -26,8 +26,13 @@ final class FakePhotoStoreImpl: @unchecked Sendable {
         return url
     }
 
+    private let cache = NSCache<NSURL, UIImage>()
+
     func loadImage(_ url: URL?) -> UIImage? {
-        guard let url, let data = try? Data(contentsOf: url) else { return nil }
-        return UIImage(data: data)
+        guard let url else { return nil }
+        if let cached = cache.object(forKey: url as NSURL) { return cached }
+        guard let data = try? Data(contentsOf: url), let image = UIImage(data: data) else { return nil }
+        cache.setObject(image, forKey: url as NSURL)
+        return image
     }
 }

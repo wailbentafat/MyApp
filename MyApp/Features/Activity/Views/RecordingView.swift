@@ -55,7 +55,7 @@ struct RecordingView: View {
                 viewModel.addBag()
             } label: {
                 VStack(spacing: 2) {
-                    Image(systemName: "trash.fill")
+                    EcoSymbol("trash.fill", size: 24)
                     Text("+1 bag").font(.ecoLabelSmall)
                 }
             }
@@ -71,13 +71,13 @@ struct RecordingView: View {
                 Button {
                     viewModel.pause()
                 } label: {
-                    Image(systemName: "pause.fill").font(.system(size: 32))
+                    EcoSymbol("pause.fill", size: 32)
                 }
                 .buttonStyle(.ecoRound(size: 96))
                 .accessibilityLabel("Pause")
 
                 // Ghost-camera After photo arrives in Phase 5.
-                Button {} label: { Image(systemName: "camera.fill") }
+                Button {} label: { EcoSymbol("camera.fill", size: 26) }
                     .buttonStyle(.ecoRound(size: 72, filled: false))
                     .disabled(true)
                     .opacity(0.5)

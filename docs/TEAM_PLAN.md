@@ -1,4 +1,4 @@
-# EcoPlog — Product Structure & Two-Person Work Plan
+# hɛal — Product Structure & Two-Person Work Plan
 
 > Companion to `ecoplog_app_architecture_features_specification.md`. Answers: **what are we building, in what order, and who owns what** (two developers).
 

@@ -4,6 +4,8 @@
 <dict>
 	<key>CFBundleDevelopmentRegion</key>
 	<string>$(DEVELOPMENT_LANGUAGE)</string>
+	<key>CFBundleDisplayName</key>
+	<string>hɛal</string>
 	<key>CFBundleExecutable</key>
 	<string>$(EXECUTABLE_NAME)</string>
 	<key>CFBundleIdentifier</key>
@@ -23,19 +25,19 @@
 		<string>instagram-stories</string>
 	</array>
 	<key>NSCameraUsageDescription</key>
-	<string>EcoPlog takes the Before and After photos of a cleanup.</string>
+	<string>hɛal takes the Before and After photos of a cleanup.</string>
 	<key>NSHealthShareUsageDescription</key>
-	<string>EcoPlog reads your heart rate, steps and energy to show your cleanup stats.</string>
+	<string>hɛal reads your heart rate, steps and energy to show your cleanup stats.</string>
 	<key>NSHealthUpdateUsageDescription</key>
-	<string>EcoPlog saves your cleanups as workouts in Apple Health.</string>
+	<string>hɛal saves your cleanups as workouts in Apple Health.</string>
 	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
-	<string>EcoPlog keeps recording your route when the screen is locked during a cleanup.</string>
+	<string>hɛal keeps recording your route when the screen is locked during a cleanup.</string>
 	<key>NSLocationWhenInUseUsageDescription</key>
-	<string>EcoPlog records your route while you clean up.</string>
+	<string>hɛal records your route while you clean up.</string>
 	<key>NSMotionUsageDescription</key>
-	<string>EcoPlog counts your steps during a cleanup.</string>
+	<string>hɛal counts your steps during a cleanup.</string>
 	<key>NSPhotoLibraryAddUsageDescription</key>
-	<string>EcoPlog saves your cleanup reel to your photo library.</string>
+	<string>hɛal saves your cleanup reel to your photo library.</string>
 	<key>NSSupportsLiveActivities</key>
 	<true/>
 	<key>UIAppFonts</key>

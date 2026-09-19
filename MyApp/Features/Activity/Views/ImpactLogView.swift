@@ -76,11 +76,11 @@ struct ImpactLogView: View {
                             minus: @escaping () -> Void, plus: @escaping () -> Void) -> some View {
         HStack {
             if let systemImage {
-                Image(systemName: systemImage).foregroundStyle(Eco.primary).frame(width: 28)
+                EcoSymbol(systemImage, size: 22).foregroundStyle(Eco.textPrimary).frame(width: 28)
             }
             Text(title).font(.ecoBodyLarge).foregroundStyle(Eco.textBody)
             Spacer()
-            Button(action: minus) { Image(systemName: "minus") }
+            Button(action: minus) { EcoSymbol("minus", size: 16) }
                 .buttonStyle(.ecoRound(size: 40, filled: false))
                 .accessibilityLabel("Remove \(title)")
             Text(value)
@@ -88,7 +88,7 @@ struct ImpactLogView: View {
                 .monospacedDigit()
                 .foregroundStyle(Eco.textPrimary)
                 .frame(minWidth: 52)
-            Button(action: plus) { Image(systemName: "plus") }
+            Button(action: plus) { EcoSymbol("plus", size: 16) }
                 .buttonStyle(.ecoRound(size: 40))
                 .accessibilityLabel("Add \(title)")
         }

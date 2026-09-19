@@ -29,6 +29,7 @@ targets:
       path: MyApp/Info.plist
       properties:
         UILaunchScreen: {}
+        CFBundleDisplayName: hɛal
         UIAppFonts:
           - Inter.ttf
         UIBackgroundModes:
@@ -36,13 +37,13 @@ targets:
         NSSupportsLiveActivities: true
         LSApplicationQueriesSchemes:
           - instagram-stories
-        NSLocationWhenInUseUsageDescription: EcoPlog records your route while you clean up.
-        NSLocationAlwaysAndWhenInUseUsageDescription: EcoPlog keeps recording your route when the screen is locked during a cleanup.
-        NSHealthShareUsageDescription: EcoPlog reads your heart rate, steps and energy to show your cleanup stats.
-        NSHealthUpdateUsageDescription: EcoPlog saves your cleanups as workouts in Apple Health.
-        NSMotionUsageDescription: EcoPlog counts your steps during a cleanup.
-        NSCameraUsageDescription: EcoPlog takes the Before and After photos of a cleanup.
-        NSPhotoLibraryAddUsageDescription: EcoPlog saves your cleanup reel to your photo library.
+        NSLocationWhenInUseUsageDescription: hɛal records your route while you clean up.
+        NSLocationAlwaysAndWhenInUseUsageDescription: hɛal keeps recording your route when the screen is locked during a cleanup.
+        NSHealthShareUsageDescription: hɛal reads your heart rate, steps and energy to show your cleanup stats.
+        NSHealthUpdateUsageDescription: hɛal saves your cleanups as workouts in Apple Health.
+        NSMotionUsageDescription: hɛal counts your steps during a cleanup.
+        NSCameraUsageDescription: hɛal takes the Before and After photos of a cleanup.
+        NSPhotoLibraryAddUsageDescription: hɛal saves your cleanup reel to your photo library.
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.wailbentafat.MyApp
@@ -62,7 +63,7 @@ targets:
     info:
       path: EcoPlogWidgets/Info.plist
       properties:
-        CFBundleDisplayName: EcoPlog
+        CFBundleDisplayName: hɛal
         NSExtension:
           NSExtensionPointIdentifier: com.apple.widgetkit-extension
     settings:

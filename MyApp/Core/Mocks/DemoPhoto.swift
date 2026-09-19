@@ -4,6 +4,13 @@ import UIKit
 /// button works on the simulator (no camera) without bundling a real asset.
 enum DemoPhoto {
     static var image: UIImage {
+        if let url = DemoPhotos.url("before_beach"), let data = try? Data(contentsOf: url), let real = UIImage(data: data) {
+            return real
+        }
+        return placeholder
+    }
+
+    private static var placeholder: UIImage {
         let size = CGSize(width: 1024, height: 1024)
         let renderer = UIGraphicsImageRenderer(size: size)
         return renderer.image { context in

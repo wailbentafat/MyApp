@@ -38,7 +38,7 @@ struct CleanUpDetailView: View {
                         .font(.ecoBodySmall)
                         .foregroundStyle(Eco.textSecondary)
                     if let hazardMessage = cleanUp.hazard.message {
-                        Label(hazardMessage, systemImage: "exclamationmark.triangle.fill")
+                        EcoLabel(hazardMessage, systemImage: "exclamationmark.triangle.fill")
                             .font(.ecoBodySmall)
                             .foregroundStyle(cleanUp.hazard == .hazardous ? Eco.error : Eco.warning)
                     }
@@ -59,7 +59,7 @@ struct CleanUpDetailView: View {
                 gearSection
 
                 if let startsAt = cleanUp.startsAt {
-                    Label(startsAt.formatted(date: .abbreviated, time: .shortened), systemImage: "calendar")
+                    EcoLabel(startsAt.formatted(date: .abbreviated, time: .shortened), systemImage: "calendar")
                         .font(.ecoBodyMedium)
                         .foregroundStyle(Eco.textBody)
                 }
@@ -90,7 +90,7 @@ struct CleanUpDetailView: View {
                     .scaledToFill()
             } else {
                 Eco.surfaceRaised
-                    .overlay(Image(systemName: "photo.fill").font(.largeTitle).foregroundStyle(Eco.textHint))
+                    .overlay(EcoSymbol("photo.fill", size: 40).foregroundStyle(Eco.textHint))
             }
         }
         .frame(height: 200)
@@ -114,7 +114,7 @@ struct CleanUpDetailView: View {
                         toggleGear(item.name)
                     } label: {
                         HStack {
-                            Image(systemName: committedGear.contains(item.name) ? "checkmark.circle.fill" : "circle")
+                            EcoSymbol(committedGear.contains(item.name) ? "checkmark.circle.fill" : "circle")
                                 .foregroundStyle(committedGear.contains(item.name) ? Eco.primary : Eco.textHint)
                             Text(item.name)
                                 .font(.ecoBodyMedium)
@@ -152,7 +152,7 @@ struct CleanUpDetailView: View {
                 Button {
                     showActivitySheet = true
                 } label: {
-                    Label("Start Activity", systemImage: "play.fill")
+                    EcoLabel("Start Activity", systemImage: "play.fill")
                 }
                 .buttonStyle(.ecoSecondary)
             }
@@ -181,7 +181,7 @@ struct CleanUpDetailView: View {
             if let user = appSession.currentUser {
                 await feedService.publish(activity: activity, cleanUp: updated, author: user)
             }
-            selectedTab = .feed
+            selectedTab = .home
             dismiss()
         }
     }

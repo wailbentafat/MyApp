@@ -76,7 +76,7 @@ struct ProfileView: View {
                             HStack {
                                 Text("Sign out")
                                 Spacer()
-                                Image(systemName: "rectangle.portrait.and.arrow.right")
+                                EcoSymbol("rectangle.portrait.and.arrow.right")
                             }
                         }
                         .foregroundStyle(Eco.error)
@@ -95,14 +95,12 @@ struct ProfileView: View {
 
     private var header: some View {
         HStack(spacing: Eco.Space.m) {
-            Image(systemName: appSession.currentUser?.avatarSystemImage ?? "person.crop.circle.fill")
-                .font(.system(size: 48))
-                .foregroundStyle(Eco.primary)
+            EcoAvatar(name: appSession.currentUser?.name ?? "hɛal", size: 56)
             VStack(alignment: .leading, spacing: 2) {
                 Text(appSession.currentUser?.name ?? "—")
                     .font(.ecoHeadlineSmall)
                     .foregroundStyle(Eco.textPrimary)
-                Text("EcoPlogger")
+                Text("Healer")
                     .font(.ecoBodySmall)
                     .foregroundStyle(Eco.textSecondary)
             }
@@ -121,7 +119,7 @@ private struct BadgeTile: View {
 
     var body: some View {
         VStack(spacing: Eco.Space.s) {
-            Image(systemName: badge.systemImage)
+            EcoSymbol(badge.systemImage)
                 .font(.title2)
                 .foregroundStyle(badge.isEarned ? Eco.onPrimary : Eco.textHint)
                 .frame(width: 56, height: 56)
@@ -140,7 +138,7 @@ private struct HistoryRow: View {
 
     var body: some View {
         HStack {
-            Image(systemName: "figure.run")
+            EcoSymbol("figure.run")
                 .foregroundStyle(Eco.primary)
             VStack(alignment: .leading, spacing: 2) {
                 Text(activity.startedAt.formatted(date: .abbreviated, time: .omitted))

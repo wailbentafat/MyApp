@@ -9,12 +9,17 @@ import Foundation
 /// single feature view — they only ever see `CleanUpRepository` / `ActivityRepository`.
 actor FakeBackendService: CleanUpRepository, ActivityRepository, FeedService {
     private var cleanUps: [UUID: CleanUp]
-    private var activities: [UUID: Activity] = [:]
+    private var activities: [UUID: Activity]
     private var feedPosts: [FeedPost]
     private var continuations: [UUID: AsyncStream<[CleanUp]>.Continuation] = [:]
 
-    init(seed: [CleanUp] = Fixtures.seedCleanUps(), feed: [FeedPost] = Fixtures.seedFeedPosts()) {
+    init(
+        seed: [CleanUp] = Fixtures.seedCleanUps(),
+        feed: [FeedPost] = Fixtures.seedFeedPosts(),
+        activities: [Activity] = Fixtures.seedActivities()
+    ) {
         self.cleanUps = Dictionary(uniqueKeysWithValues: seed.map { ($0.id, $0) })
+        self.activities = Dictionary(uniqueKeysWithValues: activities.map { ($0.id, $0) })
         self.feedPosts = feed
     }
 

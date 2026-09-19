@@ -11,8 +11,7 @@ struct SpotCaptureView: View {
         VStack(spacing: Eco.Space.xl) {
             Spacer()
 
-            Image(systemName: "camera.viewfinder")
-                .font(.system(size: 64))
+            EcoSymbol("camera.viewfinder", size: 64)
                 .foregroundStyle(Eco.primary)
 
             VStack(spacing: Eco.Space.s) {
@@ -32,13 +31,13 @@ struct SpotCaptureView: View {
                 Button {
                     showCamera = true
                 } label: {
-                    Label("Take photo", systemImage: "camera.fill")
+                    EcoLabel("Take photo", systemImage: "camera.fill")
                 }
                 .buttonStyle(.eco)
                 .disabled(!UIImagePickerController.isSourceTypeAvailable(.camera))
 
                 PhotosPicker(selection: $pickerItem, matching: .images) {
-                    Label("Choose from library", systemImage: "photo.on.rectangle")
+                    EcoLabel("Choose from library", systemImage: "photo.on.rectangle")
                 }
                 .buttonStyle(.ecoSecondary)
 

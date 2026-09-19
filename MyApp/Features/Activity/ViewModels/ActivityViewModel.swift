@@ -204,6 +204,15 @@ final class ActivityViewModel: Identifiable {
     var elevationText: String { String(Int(elevationGain.rounded())) }
     var heartRateText: String { heartRate.map(String.init) ?? "--" }
     var stepsText: String { steps.map(String.init) ?? "--" }
+    /// Rough plastic-bottle equivalent shown on the impact banner (same factor as the Profile equivalents).
+    var bottlesEquivalent: Int { impact.bags * 45 }
+    var impactBannerTitle: String {
+        impact.bags > 0
+            ? "≈ \(bottlesEquivalent) plastic bottles kept out of waterways"
+            : "Every step counts. Log your bags next time!"
+    }
+    var summaryTitle: String { savedActivity?.title ?? title }
+    var dateText: String { (startedAt ?? now()).formatted(date: .abbreviated, time: .shortened) }
     var energyLabel: String { kcalIsEstimated ? "Calories (est.)" : "Calories" }
 
     static func formatDuration(_ seconds: TimeInterval) -> String {

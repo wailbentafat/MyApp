@@ -6,52 +6,59 @@ struct WelcomeView: View {
     @Environment(\.appSession) private var appSession
 
     var body: some View {
-        VStack(spacing: Eco.Space.xl) {
-            Spacer()
+        ZStack {
+            Eco.background.ignoresSafeArea()
 
-            Image(systemName: "leaf.fill")
-                .font(.system(size: 56))
-                .foregroundStyle(Eco.onPrimary)
-                .frame(width: 112, height: 112)
-                .background(Eco.brandGradient, in: Circle())
-
-            VStack(spacing: Eco.Space.s) {
-                Text("EcoPlog")
-                    .font(.ecoDisplayLarge)
-                    .foregroundStyle(Eco.textPrimary)
-                Text("Turn every run into a cleanup.")
-                    .font(.ecoBodyLarge)
-                    .foregroundStyle(Eco.textSecondary)
-            }
-
-            HStack(spacing: Eco.Space.m) {
-                EcoStatTile(value: "5.2 km", label: "Distance", systemImage: "figure.walk")
-                EcoStatTile(value: "312", label: "kcal", systemImage: "flame.fill")
-            }
-
-            Spacer()
-
-            Button {
-                Task { await appSession.signInWithApple() }
-            } label: {
-                HStack(spacing: Eco.Space.s) {
-                    if appSession.isSigningIn {
-                        ProgressView().tint(Eco.onPrimary)
-                    } else {
-                        Image(systemName: "apple.logo")
+            if let image = FakePhotoStore.shared.loadImage(DemoPhotos.url("crew_beach")) {
+                Image(uiImage: image)
+                    .resizable()
+                    .scaledToFill()
+                    .ignoresSafeArea()
+                    .overlay {
+                        LinearGradient(
+                            colors: [Eco.background.opacity(0.35), Eco.background.opacity(0.75), Eco.background],
+                            startPoint: .top, endPoint: .bottom
+                        )
+                        .ignoresSafeArea()
                     }
-                    Text(appSession.isSigningIn ? "Signing in…" : "Sign in with Apple")
-                }
             }
-            .buttonStyle(.eco)
-            .disabled(appSession.isSigningIn)
 
-            Text("Sign-in and backend are simulated for this build.")
-                .font(.ecoLabelSmall)
-                .foregroundStyle(Eco.textHint)
+            VStack(spacing: Eco.Space.xl) {
+                Spacer()
+
+                Image("HealLogo")
+                    .resizable()
+                    .scaledToFit()
+                    .frame(height: 150)
+                    .foregroundStyle(.white)
+                    .accessibilityHidden(true)
+
+                Text(AppInfo.tagline)
+                    .font(.ecoBodyLarge)
+                    .foregroundStyle(Eco.textBody)
+                    .multilineTextAlignment(.center)
+
+                Button {
+                    Task { await appSession.signInWithApple() }
+                } label: {
+                    HStack(spacing: Eco.Space.s) {
+                        if appSession.isSigningIn {
+                            ProgressView().tint(Eco.onButton)
+                        } else {
+                            Image(systemName: "apple.logo")
+                        }
+                        Text(appSession.isSigningIn ? "Signing in…" : "Continue with Apple")
+                    }
+                }
+                .buttonStyle(.eco)
+                .disabled(appSession.isSigningIn)
+
+                Text("Sign-in and backend are simulated for this build.")
+                    .font(.ecoLabelSmall)
+                    .foregroundStyle(Eco.textHint)
+            }
+            .padding(Eco.Space.l)
         }
-        .padding(Eco.Space.l)
-        .ecoScreenBackground()
     }
 }
 

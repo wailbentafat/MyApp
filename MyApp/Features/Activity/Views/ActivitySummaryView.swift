@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// Strava-style activity summary: title, route map, stat grid, impact.
+/// Strava-style activity post shown after saving: title, stats row, impact banner, route + photos, impact.
 struct ActivitySummaryView: View {
     let viewModel: ActivityViewModel
     var onDone: () -> Void
@@ -9,50 +9,62 @@ struct ActivitySummaryView: View {
         ScrollView {
             VStack(alignment: .leading, spacing: Eco.Space.l) {
                 VStack(alignment: .leading, spacing: Eco.Space.xs) {
-                    Text(viewModel.savedActivity?.title ?? viewModel.title)
+                    Text(viewModel.summaryTitle)
                         .font(.ecoDisplaySmall)
                         .foregroundStyle(Eco.textPrimary)
-                    Text(Date.now.formatted(date: .abbreviated, time: .shortened))
+                    Text(viewModel.dateText)
                         .font(.ecoBodySmall)
                         .foregroundStyle(Eco.textSecondary)
                 }
 
+                EcoStatRow(stats: [
+                    EcoStat(label: "Distance", value: viewModel.distanceValueText + " km"),
+                    EcoStat(label: "Pace", value: viewModel.averagePaceText + " /km"),
+                    EcoStat(label: "Time", value: viewModel.timeText),
+                ])
+
+                EcoBanner(systemImage: "leaf.circle.fill", title: viewModel.impactBannerTitle,
+                          subtitle: viewModel.impact.bags > 0 ? "\(viewModel.impact.bags) bags collected" : nil)
+
                 RouteMapView(coordinates: viewModel.coordinates)
-                    .frame(height: 260)
+                    .frame(height: 240)
+                    .frame(maxWidth: .infinity)
                     .clipShape(RoundedRectangle(cornerRadius: Eco.Radius.card))
 
-                LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: Eco.Space.m) {
-                    EcoStatTile(value: viewModel.distanceValueText + " km", label: "Distance", systemImage: "figure.walk")
-                    EcoStatTile(value: viewModel.timeText, label: "Moving time", systemImage: "timer")
-                    EcoStatTile(value: viewModel.averagePaceText + " /km", label: "Avg pace", systemImage: "speedometer")
-                    EcoStatTile(value: viewModel.elevationText + " m", label: "Elevation gain", systemImage: "mountain.2.fill")
-                    EcoStatTile(value: viewModel.kcalText, label: viewModel.energyLabel, systemImage: "flame.fill")
-                    EcoStatTile(value: viewModel.stepsText, label: "Steps", systemImage: "shoeprints.fill")
-                }
+                EcoStatRow(stats: [
+                    EcoStat(label: "Elevation", value: viewModel.elevationText + " m"),
+                    EcoStat(label: viewModel.energyLabel, value: viewModel.kcalText),
+                    EcoStat(label: "Steps", value: viewModel.stepsText),
+                ])
 
-                VStack(alignment: .leading, spacing: Eco.Space.m) {
-                    EcoSectionHeader(title: "Impact")
-                    HStack(spacing: Eco.Space.xl) {
-                        EcoMetric(label: "Bags", value: String(viewModel.impact.bags))
-                        EcoMetric(label: "Weight", value: String(format: "%.1f", viewModel.impact.kg), unit: "kg")
-                        EcoMetric(label: "Items", value: String(viewModel.impact.totalItems))
-                    }
-                    let categories = WasteType.allCases.filter { viewModel.impact.count(for: $0) > 0 }
-                    if !categories.isEmpty {
-                        HStack {
-                            ForEach(categories) { category in
-                                EcoChip(title: "\(category.label) \(viewModel.impact.count(for: category))",
-                                        systemImage: category.systemImage, isSelected: true)
-                            }
-                        }
-                    }
-                }
-                .ecoCard()
+                impactCard
 
                 Button("Done", action: onDone)
                     .buttonStyle(.eco)
             }
             .padding(Eco.Space.l)
+            .frame(maxWidth: .infinity)
         }
+    }
+
+    private var impactCard: some View {
+        VStack(alignment: .leading, spacing: Eco.Space.m) {
+            EcoSectionHeader(title: "Impact")
+            HStack(spacing: Eco.Space.xl) {
+                EcoMetric(label: "Bags", value: String(viewModel.impact.bags))
+                EcoMetric(label: "Weight", value: String(format: "%.1f", viewModel.impact.kg), unit: "kg")
+                EcoMetric(label: "Items", value: String(viewModel.impact.totalItems))
+            }
+            let types = WasteType.allCases.filter { viewModel.impact.count(for: $0) > 0 }
+            if !types.isEmpty {
+                EcoFlowLayout {
+                    ForEach(types) { type in
+                        EcoChip(title: "\(type.label) \(viewModel.impact.count(for: type))",
+                                systemImage: type.systemImage, isSelected: true)
+                    }
+                }
+            }
+        }
+        .ecoCard()
     }
 }

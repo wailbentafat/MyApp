@@ -1,4 +1,4 @@
-# EcoPlog
+# hɛal
 
 **Strava for cleaning up the planet.** Spot pollution, let AI plan the cleanup, get neighbours to join, track the workout, and share a Before/After reel with your fitness stats.
 
@@ -57,7 +57,7 @@ docs/TEAM_PLAN.md      Product structure, two-person split, milestones, risks
 
 ## Design system
 
-Dark green is the primary look; the app forces dark mode. Use tokens, never hard-coded colors:
+Tokens come from the Figma "Confy" foundations (brand greens, greys, success/info/warning/error, light + dark values in `EcoPalette`, semantic `Eco.*`). The app is dark-first and forces dark mode. Use tokens, never hard-coded colors:
 
 ```swift
 Text("5.2 km").font(.ecoStat).foregroundStyle(Eco.textPrimary)
@@ -65,7 +65,7 @@ Button("Start Activity") { }.buttonStyle(.eco)
 EcoStatTile(value: "312", label: "kcal", systemImage: "flame.fill")
 ```
 
-Open the `Design system` preview in `EcoComponents.swift` to see every component. Fonts: Inter (bundled) for body/labels and Boathouse for headings (add the font files to `MyApp/Resources/Fonts` and `UIAppFonts`; until then headings use the system font).
+Open the `Design system` preview in `EcoComponents.swift` to see every component. Navigation is the native SwiftUI `TabView` (iOS 26 Liquid Glass tab bar): Home · Maps · Record · Clean-Ups · You. Fonts: Inter (bundled) for body/labels and Boathouse for headings (add the font files to `MyApp/Resources/Fonts` and `UIAppFonts`; until then headings use the system font).
 
 ## Team & roadmap
 

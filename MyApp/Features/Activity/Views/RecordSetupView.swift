@@ -11,8 +11,7 @@ struct RecordSetupView: View {
             ZStack(alignment: .topLeading) {
                 background
                 Button(action: onClose) {
-                    Image(systemName: "xmark")
-                        .font(.ecoTitleMedium)
+                    EcoSymbol("xmark", size: 18)
                         .foregroundStyle(Eco.textPrimary)
                         .frame(width: 40, height: 40)
                         .background(Eco.surface, in: Circle())
@@ -66,11 +65,11 @@ private struct CleanUpBanner: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: Eco.Space.s) {
-            Label(cleanUp.title, systemImage: "leaf.fill")
+            EcoLabel(cleanUp.title, systemImage: "leaf.fill", size: 20, spacing: 8)
                 .font(.ecoHeadlineSmall)
                 .foregroundStyle(Eco.textPrimary)
             if !cleanUp.wasteTypes.isEmpty {
-                HStack {
+                EcoFlowLayout {
                     ForEach(cleanUp.wasteTypes) { EcoChip(title: $0.label, systemImage: $0.systemImage) }
                 }
             }
