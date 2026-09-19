@@ -1,6 +1,10 @@
 import SwiftUI
 
-struct ContentView: View {
+/// The pre-sign-in screen. Auth is faked (`FakeAuthService`) — this just runs the
+/// UI + session flow a real Sign in with Apple button would trigger.
+struct WelcomeView: View {
+    @Environment(\.appSession) private var appSession
+
     var body: some View {
         VStack(spacing: Eco.Space.xl) {
             Spacer()
@@ -27,8 +31,24 @@ struct ContentView: View {
 
             Spacer()
 
-            Button("Start Plog") {}
-                .buttonStyle(.eco)
+            Button {
+                Task { await appSession.signInWithApple() }
+            } label: {
+                HStack(spacing: Eco.Space.s) {
+                    if appSession.isSigningIn {
+                        ProgressView().tint(Eco.onPrimary)
+                    } else {
+                        Image(systemName: "apple.logo")
+                    }
+                    Text(appSession.isSigningIn ? "Signing in…" : "Sign in with Apple")
+                }
+            }
+            .buttonStyle(.eco)
+            .disabled(appSession.isSigningIn)
+
+            Text("Sign-in and backend are simulated for this build.")
+                .font(.ecoLabelSmall)
+                .foregroundStyle(Eco.textHint)
         }
         .padding(Eco.Space.l)
         .ecoScreenBackground()
@@ -36,6 +56,6 @@ struct ContentView: View {
 }
 
 #Preview {
-    ContentView()
+    WelcomeView()
         .ecoTheme()
 }
