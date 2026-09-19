@@ -1,203 +1,213 @@
-# EcoPlog — Product Structure & Team Work Plan
+# EcoPlog — Product Structure & Two-Person Work Plan
 
-> Companion to `ecoplog_app_architecture_features_specification.md`. This file answers: **what exactly are we building, in what order, and who owns what.**
+> Companion to `ecoplog_app_architecture_features_specification.md`. Answers: **what are we building, in what order, and who owns what** (two developers).
 
-## 1. The idea in one paragraph
-EcoPlog is Strava for cleaning up the planet. A user starts a *Plog* (a walk/run where they pick up litter), the app records route, time, distance and calories (HealthKit), guides a **Before** and **After** photo, and logs what was collected. At the end they get a shareable **Impact Badge** / reel for Instagram Stories. Users can also **spot** pollution: snap a photo, AI identifies the waste and the gear needed, and a public **Clean-Up Beacon** appears on the community map for others to claim or join as a group event.
+## 1. The idea
+
+You're on your daily walk and pass a trash-strewn corner of a park. You take a photo; **AI scans it**, identifies the waste, estimates the volume and lists the gear (heavy-duty gloves, trash pickers…). The app pins a **Clean-Up** on the map, turning the polluted spot into a community event. Nearby runners and neighbours get a **notification**, **RSVP**, grab their gear and meet there.
+
+When everyone arrives, they tap **Start Activity**. CoreLocation records the route, HealthKit supplies calories, heart rate and steps, and live progress shows on the **Dynamic Island**. When the area is clean, the app opens a **ghost camera** (the original photo as a translucent overlay) to shoot a matching **After** photo. On finish, the app compiles HealthKit metrics + route map + Before/After into a **video reel with a slider transition**, ready to export to an **Instagram Story**.
+
+### Vocabulary (use these words everywhere, in code and UI)
+| Term | Meaning |
+|---|---|
+| **Spot** | Photographing a polluted place and letting AI analyse it |
+| **Clean-Up** | The pin/event created from a Spot: photo, waste, gear, location, RSVPs, status |
+| **Activity** | One person's tracked workout (route + HealthKit + photos), free or attached to a Clean-Up |
+| **Reel** | The exported Before/After video with stats |
 
 ## 2. Product structure
 
 ### 2.1 Core loop (everything we build serves this)
 ```
- SPOT  ──►  JOIN/CLAIM  ──►  PLOG  ──►  PROVE  ──►  SHARE  ──►  INSPIRE
- (AI photo   (beacon or       (track     (before/    (badge,     (feed, kudos,
-  → beacon)   expedition)      route,     after +     reel,       streaks,
-                               health)    impact log) IG story)   territory)
+ SPOT ──► PIN ──► NOTIFY & RSVP ──► START ACTIVITY ──► AFTER PHOTO ──► REEL ──► INSTAGRAM STORY
+ photo   Clean-Up  nearby people     route + HealthKit   ghost camera   slider   share
+ + AI    on map    join              + Dynamic Island    matches Before  video
 ```
+Key insight: **the Before photo is the Spot photo.** It is captured once, at scan time, together with GPS position and compass heading, and reused later as the ghost overlay and as the left side of the Reel.
 
-### 2.2 Screen map (5 tabs)
-| Tab | Screens |
+### 2.2 Screen map (4 tabs + Activity flow)
+| Tab / flow | Screens |
 |---|---|
-| **Home / Feed** | Community feed, activity detail, comments, kudos ("Eco-Boosts") |
-| **Map** | Beacon map, beacon detail, expedition detail + RSVP, territory overlay |
-| **Plog (center, big button)** | Pre-start sheet → live tracking → camera (before/after) → finish → impact log → summary + share |
-| **Spot** | Camera → AI result (waste, gear, severity) → confirm → beacon created |
-| **Me** | Profile, stats, history, badges, streaks, settings |
+| **Map** (home) | Map of Clean-Ups (open / scheduled / live / done), filters, Clean-Up detail (photo, waste chips, gear list, attendees, RSVP, "Start Activity") |
+| **Spot** | Camera → AI analysing → result (waste, volume, gear, hazard) with editable chips → schedule (now / date, capacity) → publish |
+| **Activity** (full-screen flow, launched from a Clean-Up or the center button) | Pre-start → live tracking (map, time, distance, kcal, HR, steps, bag counter) → ghost camera After → finish → impact log → summary → Reel preview → share |
+| **Feed** | Finished activities/reels from the community, kudos (SHOULD) |
+| **Me** | Profile, history, totals, badges/streaks (SHOULD), settings, notification preferences |
 
 ### 2.3 Domain model (shared contract, defined Day 0)
-- `User` (id, name, avatar, totals, streak)
-- `Plog` (id, userId, startedAt, endedAt, route `[RoutePoint]`, distance, duration, elevation, kcal, avgHR, steps, `ImpactLog`, beforePhoto, afterPhoto, beaconId?, expeditionId?, visibility)
+- `User` (id, name, avatar, totals)
+- `CleanUp` (id, coordinate, beforePhotoURL, beforeHeading, wasteTypes, severity, estimatedBags, gear[], hazard?, startsAt?, capacity?, hostId, status: open / scheduled / live / done, attendeeIds, doneActivityIds)
+- `RSVP` (cleanUpId, userId, createdAt)
+- `Activity` (id, userId, cleanUpId?, startedAt, endedAt, route `[RoutePoint]`, distance, duration, elevation, kcal, avgHR, steps, `ImpactLog`, afterPhotoURL?, reelURL?)
 - `ImpactLog` (bags, kg, itemCounts by category)
-- `Beacon` (id, coordinate, photoURL, wasteTypes, severity, gearNeeded, estimatedBags, status: open/claimed/cleaned, createdBy, clearedByPlogId?)
-- `Expedition` (id, title, coordinate, startsAt, hostId, attendees, beaconId?, capacity)
-- `Post` (plogId, kudos, comments)
-- `Badge` / `Achievement`
+- `ScannerResult` (wasteTypes, severity, estimatedBags, gear, hazard, peopleNeeded)
+- `Post` (activityId, kudos, comments) — SHOULD
+- `Badge` — SHOULD
 
 ### 2.4 Tech stack
-SwiftUI + `@Observable` (iOS 17), SwiftData (local/offline cache), CoreLocation, MapKit, HealthKit, Vision, PhotosUI/AVFoundation, ActivityKit (Live Activity, needs a Widget Extension target), `ImageRenderer`, Supabase Swift SDK.
+SwiftUI + `@Observable` (iOS 17), SwiftData (local/offline), CoreLocation, MapKit, HealthKit, CoreMotion (`CMPedometer` live steps), Vision, AVFoundation (camera + reel), ActivityKit (Live Activity / Dynamic Island, needs a Widget Extension target), `ImageRenderer`, UserNotifications + APNs, Supabase (Postgres + PostGIS, Storage, Auth with Apple, Edge Functions).
 
-## 3. Feature list
+## 3. Features
 
-### 3.1 From the spec (kept)
-Activity tracking, HealthKit metrics, before/after capture with ghost overlay, impact log, AI pollution scanner, auto-generated beacons, social cards, before/after video, IG Stories deep link, map hub, group expeditions, feed, territory heatmap + decay, reel builder, leaderboards/sponsor challenges.
+### 3.1 MUST (the story above, end to end)
+1. AI Spot: photo → waste types, volume, gear list, hazard flag
+2. Clean-Up pinned on the map with RSVP
+3. Nearby notification when a Clean-Up is created
+4. Start Activity: route (CoreLocation) + HealthKit (kcal, HR, steps) + live progress
+5. Dynamic Island / Lock Screen Live Activity
+6. Ghost-camera After photo aligned to the Before
+7. Reel: slider transition Before→After + route + stats, 9:16
+8. Export to Instagram Story
 
-### 3.2 New proposals (matching the idea)
-| # | Feature | Why it fits | Uses |
-|---|---|---|---|
-| 1 | **Auto face/plate blur** on all public photos | Photos are taken in public; privacy is a trust-blocker | Vision `VNDetectFaceRectanglesRequest` |
-| 2 | **Beacon verification**: After photo + GPS proximity closes a beacon; AI compares to Before | Stops fake clean-ups, makes impact credible | Vision + CoreLocation |
-| 3 | **Hazard safety flow**: needles, chemicals, glass → "Don't touch, report to city" + call/report link | Real-world safety, differentiates from a toy | AI result flag |
-| 4 | **Impact equivalents** (kg collected → "≈ N plastic bottles kept out of the ocean") | Makes stats shareable and emotional | pure logic |
-| 5 | **Streaks, badges, weekly goals** | Retention, Strava-style | SwiftData + backend |
-| 6 | **Live Activity + Dynamic Island** (time, distance, bags) | Native-feeling, demo-friendly | ActivityKit |
-| 7 | **Siri / App Intents / Action Button: "Start Plog"** | Hands-free, gloves on | App Intents |
-| 8 | **Gear checklist** generated from a beacon; "I'm bringing gloves" | Coordinates group events | AI output |
-| 9 | **Weather + air-quality warning** before starting | Safety | WeatherKit (stretch) |
-| 10 | **Apple Watch companion** (start/stop, bag counter) | Real HealthKit live data | watchOS (stretch, post-MVP) |
-| 11 | **Offline-first plogging** (sync later) | Trails have no signal | SwiftData queue |
-| 12 | **Sponsor quests / council challenges** | Monetization story for judges | backend only |
+### 3.2 SHOULD
+Impact log (bags/kg), impact equivalents ("≈ N bottles"), Clean-Up verification (proximity + After photo), face blur on public photos, hazard safety screen, feed + kudos, activity history, badges/streaks, still badge card as a fallback to the Reel.
 
-## 4. Architecture rules (so 3 people don't collide)
-1. **Feature folders, one owner each.** New Swift files need no project changes because `project.yml` globs `MyApp/`.
+### 3.3 STRETCH
+Territory heatmap with decay, Apple Watch companion, "Start Plog" App Intent / Action Button, WeatherKit warning, group chat, sponsor challenges/leaderboards.
+
+## 4. Technical notes that shape the plan
+- **HealthKit on iPhone (iOS 17)**: no `HKLiveWorkoutBuilder`. Use `HKWorkoutBuilder` + `HKWorkoutRouteBuilder` to *save* the workout at the end. Live numbers: steps from `CMPedometer`; heart rate from Apple Watch via `HKAnchoredObjectQuery` (shows "—" without a Watch); calories = MET estimate live (labelled "estimated"), replaced by HealthKit active energy if available at the end.
+- **Notifications "nearby"**: push needs APNs and a server. Each user's device stores a coarse location (geohash, updated when the app is active/significant location change); a Supabase Edge Function on Clean-Up insert selects users within ~3 km and sends APNs. Fallback for the demo: a "notify nearby" local notification on a second phone.
+- **Ghost camera**: Before photo stores coordinate + compass heading; the After camera shows it at ~35% opacity, plus a "move closer / turn left" hint from heading difference.
+- **Reel**: `AVAssetWriter` renders frames from a SwiftUI/Core Animation composition (slider wipe, animated route polyline, stat counters); 1080×1920, ~10-15 s, H.264.
+- **Instagram Stories**: `instagram-stories://share?source_application=<Meta App ID>` with pasteboard `com.instagram.sharedBackgroundVideo` (or image + sticker). Needs `LSApplicationQueriesSchemes` and a Meta App ID. Fallback: `UIActivityViewController`.
+- **AI**: on-device Vision pre-check + cloud vision through a thin Edge Function that holds the API key (never ship the key in the app), returning strict JSON (`ScannerResult`). Timeout + manual entry fallback.
+- Real device needed for camera, HealthKit sensors, background GPS, Live Activities, push. Simulator: GPX route simulation.
+
+## 5. Architecture rules (so two people don't collide)
+1. **Feature folders, one owner each.** `project.yml` globs `MyApp/`, so new files need no project edits.
    ```
    MyApp/
-     App/                 (shell, tab bar — P3, tiny)
-     Core/                (models, protocols, design system, mocks — everyone, via PR)
+     App/                (shell, tabs — P2)
+     Core/               (models, repository protocols, mocks, DesignSystem ✅ — via PR)
      Features/
-       Tracking/          P1
-       Capture/           P1
-       Scanner/           P2
-       Map/               P2
-       Expeditions/       P2
-       Feed/              P3
-       Share/             P3
-       Profile/           P3
+       Activity/         P1   (session, tracking, HealthKit, live activity)
+       Camera/           P1   (ghost camera; scanner capture reuses it)
+       Reel/             P1   (video engine)
+       Spot/             P2   (AI, result, publish)
+       Map/              P2   (clean-up map, detail, RSVP)
+       Feed/             P2
+       Profile/          P2
+       Share/            P2   (Instagram, share sheet, still badge)
      Services/
-       Backend/           P3
+       Backend/          P2
+       Notifications/    P2
    ```
-2. **Contracts first, mocks always.** Day 0 we define models and repository protocols in `Core/` plus in-memory mocks (`MockPlogRepository`, `MockBeaconRepository`…). Every feature runs on mocks until the real backend lands, so nobody blocks anybody.
-3. **Injected dependencies** via SwiftUI `Environment`, e.g. `@Environment(\.beaconRepository)`.
-4. **Swift 6 strict concurrency will fight CoreLocation/HealthKit delegates.** Decision at Day 0: keep Swift 6 and isolate managers with `@MainActor`, or drop to language mode 5 for speed (recommended for a hackathon).
-5. **Stop committing `MyApp.xcodeproj`**: add to `.gitignore`, `git rm -r --cached`, everyone runs `xcodegen` after pulling. Removes the #1 merge-conflict source. Per-dev signing via an untracked `Local.xcconfig` (`DEVELOPMENT_TEAM`, unique bundle-id suffix).
-6. **Git:** `main` protected, short-lived branches `p1/…`, `p2/…`, `p3/…`, squash-merge PRs, changes under `Core/` need one review from another person. Merge to main at least twice a day.
-7. **Real device required** for camera, HealthKit sensors, background GPS, Live Activities. Simulator: use Xcode's GPX route simulation for tracking.
+2. **Contracts first, mocks always.** Day 0: models + repository protocols + in-memory mocks in `Core/`. Everyone works on mocks until the backend is live.
+3. **Dependencies via SwiftUI `Environment`** (`@Environment(\.cleanUpRepository)`).
+4. **Swift 6 vs CoreLocation/HealthKit delegates**: isolate managers with `@MainActor`, or drop to language mode 5 for speed (recommended for a hackathon).
+5. **Stop committing `MyApp.xcodeproj`**: add to `.gitignore`, `git rm -r --cached MyApp.xcodeproj`, run `xcodegen` after pulling. Per-dev signing via an untracked `Local.xcconfig`.
+6. **Git**: protected `main`, branches `p1/…` / `p2/…`, squash-merge PRs, `Core/` changes reviewed by the other person, merge at least twice a day.
+7. **Design system is done** (`Core/DesignSystem/`): use `Eco.*` colors, `.eco*` fonts, `.eco` button styles, `.ecoCard()`. No hard-coded colors in features.
 
-## 5. Day-0 shared foundation (all three, ~half a day, pair up)
+## 6. Day-0 shared foundation (~half a day, pair up)
 | Task | Who |
 |---|---|
-| Fix `project.yml`: HealthKit + background location + Live Activity entitlements, Info.plist usage strings (location always/when-in-use, camera, photo library add, health share/update, motion), `LSApplicationQueriesSchemes: instagram-stories`, Widget Extension target | P1 |
-| Domain models + repository protocols + mocks in `Core/` | P3 (draft) → all sign off |
-| ✅ **Done** — Design system in `Core/DesignSystem/` (dark green theme: `Eco` colors, `.eco*` fonts, `.eco` buttons, `.ecoCard()`, `EcoStatTile`, `EcoChip`; root `.ecoTheme()`). Remaining: app icon placeholder, bundle Poppins/Inter fonts | P2 |
-| App shell: 5-tab `TabView`, routing, environment injection, empty placeholder screens per feature | P3 |
-| Supabase project, schema draft, Sign in with Apple, keys in untracked config | P3 |
-| Decisions in §9 closed | all |
+| ✅ Design system (dark green theme) | done |
+| `project.yml`: HealthKit, background location, Live Activity (`NSSupportsLiveActivities`), push entitlement, Info.plist usage strings (location always/when-in-use, camera, photo library add, health share/update, motion), `LSApplicationQueriesSchemes: instagram-stories`, Widget Extension target | P1 |
+| Domain models + repository protocols + mocks (`CleanUpRepository`, `ActivityRepository`, `ScannerService`) | P2 draft → both sign off |
+| App shell: tab bar, environment injection, placeholder screens | P2 |
+| Supabase project, schema draft, Sign in with Apple, keys in untracked config | P2 |
+| `.gitignore` the xcodeproj, `Local.xcconfig`, branch rules | P1 |
+| Close the open decisions in §10 | both |
 
-## 6. Ownership
+## 7. Ownership
 
-### 👤 Person 1 — **Plog Engine** (tracking, health, capture)
-Owns everything that happens *while the user is plogging*.
+### 👤 Person 1 — **Activity & Reel** (everything after "Start Activity", plus the video)
+Owns the tracked workout, the sensors, the camera and the video.
 
 | Feature | Details / frameworks | Size |
 |---|---|---|
-| Session state machine | idle → running → paused → finished, `@Observable PlogSession` | M |
+| Session state machine | idle → running → paused → finished, `@Observable ActivitySession`, `start(context: .free / .cleanUp(id))` | M |
 | GPS route tracking | `CLLocationManager`, background updates, accuracy filter, auto-pause, distance/pace/elevation, live `MapPolyline` | L |
-| HealthKit | Authorization flow; save `HKWorkout` (walking/running) + `HKWorkoutRouteBuilder`; read HR, steps, active energy; **MET-based calorie fallback** (no live builder on iPhone in iOS 17, use Watch data when present) | L |
-| Live Activity | Widget extension, Lock Screen + Dynamic Island: time, distance, bags | M |
-| Before/After capture | Custom camera (`AVCaptureSession`); "before" saved with location + heading; **ghost overlay** of the before photo at 30% when taking "after" | M |
-| Impact log | Bag/kg/item counters (quick +/- UI, big gloves-friendly buttons) | S |
-| Local persistence | SwiftData store for `Plog`, offline queue, crash recovery of an in-progress session | M |
-| Activity summary + history | Post-finish summary screen, list, detail with route map | M |
-| App Intent "Start Plog" | STRETCH | S |
+| HealthKit | Authorization; live steps (`CMPedometer`), HR (`HKAnchoredObjectQuery`), MET calorie estimate; save `HKWorkout` + `HKWorkoutRouteBuilder` on finish | L |
+| Live Activity / Dynamic Island | Widget extension; compact, expanded and Lock Screen layouts: time, distance, kcal, bags; updated from the session | M |
+| Camera + ghost overlay | `AVCaptureSession` camera view shared with Spot (P2 embeds it); overlay at ~35% opacity, heading/position hint | M |
+| Impact log | Bag/kg counters, gloves-friendly big buttons (also a +1 bag button on the live screen) | S |
+| Local persistence | SwiftData for `Activity`, crash recovery of an in-progress session, offline queue | M |
+| Activity summary + history | Post-finish summary with route map, history list/detail | M |
+| **Reel engine** | Slider Before→After transition, animated route, stat overlay, 9:16 `AVAssetWriter` export; `ReelRenderer.render(activity, before, after) async -> URL` | L |
+| Reel preview UI | Preview player, re-render, "Share" button hands the file URL to P2's `ShareService` | S |
+| App Intent "Start Activity" | STRETCH | S |
 
-**Exposes to others:** a finished `Plog` value (route, stats, photos, impact) via `PlogRepository`; `PlogSession.start(beacon:expedition:)` entry point (used by P2).
-**Needs from others:** upload of Plog (P3); beacon/expedition to attach (P2).
+**Exposes:** `ActivityRepository` local impl, `ActivitySession.start(context:)`, `CameraView(ghost: UIImage?)`, `ReelRenderer`.
+**Needs from P2:** Clean-Up (with Before photo + heading) to attach; upload of finished Activity; `ShareService`.
 
-### 👤 Person 2 — **Spot & Discover** (AI scanner, beacons, map, expeditions)
-Owns everything that turns a photo into an action and everything on the map.
-
-| Feature | Details / frameworks | Size |
-|---|---|---|
-| Scanner camera | One-tap capture, from Spot tab or mid-plog quick button (saves location) | S |
-| AI analysis pipeline | (a) On-device Vision pre-check (`VNClassifyImageRequest`) "is this waste?" + face blur; (b) cloud vision call through a thin proxy (Supabase Edge Function holding the key; Claude vision) returning **strict JSON**: `wasteTypes[]`, `severity`, `estimatedBags`, `gear[]`, `hazard`, `peopleNeeded`. Timeout + graceful manual-entry fallback | L |
-| Result & confirm UI | Editable chips for waste/gear, hazard warning banner, "Create beacon" | M |
-| Beacons | Create/read/claim/complete; statuses; nearby query (PostGIS); beacon detail with photo, gear checklist | M |
-| Beacon verification | "Mark cleaned" requires P1's After photo + proximity check; optional AI before/after comparison | M |
-| Map hub | MapKit `Map` with clustered annotations (beacons, expeditions, recent cleaned zones), filters, "near me" | L |
-| Group expeditions | Create, list, RSVP with live count, capacity, host tools, per-expedition comment thread (real-time chat = STRETCH) | M |
-| Territory / heatmap + decay | Grid-cell overlay (geohash/H3-style), color by recency, decay over time | STRETCH |
-| Safety flow | Hazard → "don't touch, report" screen | S |
-
-**Exposes:** `BeaconRepository`, `ExpeditionRepository`, "Start plog for this beacon" action.
-**Needs from others:** Plog completion to close a beacon (P1); tables + edge function hosting (P3); design system is P2's own.
-
-### 👤 Person 3 — **Social & Share** (backend, feed, badges, export)
-Owns identity, data, the community feed and everything that leaves the app.
+### 👤 Person 2 — **Spot & Community** (everything before "Start Activity", the backend, and sharing)
+Owns the AI, the map, people, notifications, the server, and leaving the app.
 
 | Feature | Details / frameworks | Size |
 |---|---|---|
-| Backend | Supabase schema + RLS, Sign in with Apple, Storage buckets (photos/reels), Swift service layer implementing all repository protocols; **delivers Beacon/Expedition tables first (P2 depends)** | L |
-| Sync engine | Upload finished plogs from P1's offline queue; retry | M |
-| Community feed | Paginated feed, activity card, kudos, comments, follow, report/block | M |
-| Profile & stats | Totals, history, streaks, weekly goal | M |
-| Gamification | Badges/achievements engine, impact equivalents, leaderboards (STRETCH: sponsor quests) | M |
-| **Impact Badge / social cards** | SwiftUI card templates (map polyline snapshot via `MKMapSnapshotter`, stats, photos) rendered with `ImageRenderer` at 1080×1920 and 1080×1080 | M |
-| **Instagram Stories export** | `instagram-stories://share` with pasteboard items (`com.instagram.sharedBackgroundImage`/`Video`, sticker image); needs a Meta App ID; fallback `UIActivityViewController` (TikTok goes through the share sheet, not a URL scheme) | M |
-| **Before/After reel** | `AVAssetWriter` + Core Animation compositing: wipe/fade between photos, animated route, stat overlay, 9:16, ~15 s | L |
-| Notifications | Nearby beacon, expedition reminders, kudos (STRETCH) | S |
-| App shell + Me tab | Tab bar/routing, settings | S |
+| Backend | Supabase schema + RLS (users, clean_ups, rsvps, activities, device tokens), PostGIS "nearby" query, Storage buckets, Sign in with Apple, Swift service layer implementing the repository protocols. **Ships Clean-Up + RSVP tables first (P1's Start Activity depends on them).** | L |
+| Spot capture | Uses P1's `CameraView`; saves coordinate + heading with the photo | S |
+| AI pipeline | Vision pre-check ("is this waste?") + Edge Function → cloud vision → strict `ScannerResult` JSON; timeout + manual fallback; fixtures for tests | L |
+| Result & publish UI | Editable waste/gear chips, hazard banner, schedule (now / date), capacity, "Publish Clean-Up" | M |
+| Map | MapKit map with clustered Clean-Up annotations by status, filters, "near me", Clean-Up detail sheet | L |
+| RSVP | Join/leave, live attendee count, capacity, gear checklist ("I'm bringing gloves") | M |
+| Notifications | APNs registration, coarse-location upload, Edge Function to notify users within radius, reminders before `startsAt`, "Start Activity" deep link into P1's flow | L |
+| Share | `ShareService.share(reelURL / image)`: Instagram Stories pasteboard hand-off, share-sheet fallback, sticker/hashtags | M |
+| Upload / sync | Upload finished Activity + After photo + Reel, mark Clean-Up done, retry queue | M |
+| Feed + kudos | Paginated feed of finished activities, kudos, report/block | M (SHOULD) |
+| Profile + history + badges | Totals, streaks, impact equivalents, notification prefs | M (SHOULD) |
+| Verification + face blur | Proximity + After photo check; Vision face blur before upload | M (SHOULD) |
+| Safety screen | Hazard → "don't touch, report to the city" | S (SHOULD) |
+| App shell | Tabs, routing, deep links | S |
+| Territory heatmap | STRETCH | M |
 
-**Exposes:** all repositories (real implementations), `ShareService.share(plog:)`.
-**Needs from others:** finished `Plog` (P1); beacon UI (P2).
+**Exposes:** `CleanUpRepository`, real `ActivityRepository` upload, `ScannerService`, `ShareService`.
+**Needs from P1:** `CameraView`, finished `Activity`, `ReelRenderer` output.
 
 ### Load check
-Each person has one L-heavy engine, ~2 M features and stretch items. P3 carries the most integration risk (backend), so P3 ships the mock-first contracts on Day 0 and P1/P2 never wait on it.
+Both have two L-size engines. P1 is sensor/media-heavy (GPS, HealthKit, ActivityKit, AVFoundation), P2 is server/integration-heavy (backend, AI, push, map). To keep P2 from becoming the bottleneck, P1 takes the camera and the reel, P2 takes sharing. If P2 falls behind, move Feed/Profile/Verification to "cut", not to P1; if P1 falls behind, cut the Live Activity's expanded layout and the animated route first.
 
-## 7. Milestones & cut line
+## 8. Milestones & cut line
 | Milestone | Goal | Definition of done |
 |---|---|---|
-| **M0 Foundation** | Everyone can build, run, commit | §5 complete; app launches on 3 phones; 5 empty tabs; mocks wired |
-| **M1 Vertical slices on mocks** | Each feature works alone | P1: track a walk, save HKWorkout, see it in history. P2: photo → AI JSON → beacon on map (mock store). P3: feed renders mock plogs; badge PNG renders from a sample plog |
-| **M2 Real data** | Backend live | Auth works; plogs upload; beacons shared across two phones; feed shows real activity |
-| **M3 Integration** | The core loop works end to end | Spot → beacon → start plog from beacon → before/after → finish → beacon marked cleaned → badge → IG Story. **This is the demo path.** |
-| **M4 Polish & demo** | Judge-ready | Live Activity, reel, face blur, empty/error states, seeded demo data, 2-minute demo script, screen recording backup |
+| **M0 Foundation** | Both can build, run, commit | §6 done; app launches on 2 phones; tabs + mocks wired |
+| **M1 Slices on mocks** | Each half works alone | P1: walk with GPS + HealthKit numbers, Dynamic Island updating, ghost camera works, Reel renders from sample photos. P2: photo → `ScannerResult` → Clean-Up on map (mock store), RSVP UI |
+| **M2 Real data** | Backend live | Auth; Clean-Ups visible on two phones; RSVP works; push received on the second phone |
+| **M3 Integration** | The story works end to end | Spot → pin → notify → RSVP → Start Activity from the Clean-Up → After via ghost camera → finish → Reel → Instagram Story. **This is the demo.** |
+| **M4 Polish & demo** | Judge-ready | SHOULD items, empty/error/permission states, seeded demo data, 2-minute script, screen-recording backup |
 
-**MUST:** M0–M3 (tracking, HealthKit workout, before/after, AI beacon, map, feed, badge + IG story).
-**SHOULD:** Live Activity, expeditions/RSVP, reel, face blur, streaks/badges, verification.
-**STRETCH:** territory decay, Watch app, App Intents, sponsor quests, WeatherKit, real-time chat.
-If time is short (48h): cut expeditions chat, territory, reel (keep the still badge), and leaderboards.
+**If time is short (48 h):** keep the MUST list in §3.1; replace push with local notification + realtime map update; skip feed, badges, verification, face blur; Reel may fall back to a still Before/After image with the stats card.
 
-## 8. Integration contracts (who calls whom)
+## 9. Integration contracts
 | Contract | Producer → Consumer | Shape |
 |---|---|---|
-| `PlogRepository` | P1 ↔ P3 | `save(plog)`, `history()`, `upload queue` |
-| `BeaconRepository` | P2 ↔ P3 | `create`, `nearby(coord, radius)`, `claim`, `complete(plogId)` |
-| `ExpeditionRepository` | P2 ↔ P3 | `create`, `list(near:)`, `rsvp` |
-| `PlogSession.start(context:)` | P2 → P1 | context = free / beacon / expedition |
-| `ScannerResult` JSON | proxy → P2 | fixed schema, versioned, unit-tested with fixtures |
-| `ShareService.share(plog)` | P1's summary screen → P3 | called from the finish screen |
-| Design system | P2 → all | tokens + components in `Core/DesignSystem` |
+| `CleanUpRepository` | P2 → P1, P2 | `create`, `nearby(coord, radius)`, `rsvp`, `complete(activityId)` |
+| `ActivityRepository` | P1 (local) + P2 (remote) | `save`, `history`, `upload(activity)` |
+| `ActivitySession.start(context:)` | P1 ← P2 map's "Start Activity" | context = `.free` or `.cleanUp(CleanUp)` |
+| `CameraView(ghost:)` | P1 → P2 (Spot capture) | returns image + coordinate + heading |
+| `ScannerService.analyse(image)` | P2 (proxy) | returns `ScannerResult`, versioned JSON, tested with fixtures |
+| `ReelRenderer.render(...)` | P1 → P2 | returns local video `URL` |
+| `ShareService.share(reelURL:)` | P2 ← P1's reel preview | Instagram Stories / share sheet |
+| Design system | Core | `Eco.*`, `.eco*` |
 
-**Sync points:** daily 10-minute standup, an integration session at the end of M1 and M2, a feature freeze before M4.
+**Sync points:** 10-minute daily standup; integration sessions at the end of M1 and M2; feature freeze before M4.
 
-## 9. Open decisions (close on Day 0)
-1. Backend: **Supabase (recommended, PostGIS)** vs Firebase vs CloudKit (zero server, weaker geo/moderation).
-2. AI: cloud-vision-via-proxy (recommended, fastest to good results) vs on-device-only CoreML (needs a labelled dataset such as TACO; better as a stretch). Needs an API key and a place to host the proxy.
+## 10. Open decisions (close on Day 0)
+1. Backend: **Supabase (recommended: PostGIS, Storage, Edge Functions)** vs Firebase vs CloudKit.
+2. AI: cloud vision via Edge Function (recommended) vs on-device-only CoreML (needs a dataset such as TACO, stretch).
 3. Swift 6 strict concurrency vs Swift 5 mode.
-4. Timeline (48h hackathon vs multi-week) → adjust the cut line.
-5. Instagram Stories requires a registered Meta App ID; who creates it.
-6. Apple Developer accounts / devices for each teammate (HealthKit and Live Activities need real signing).
+4. Timeline (48 h vs multi-week) → where the cut line falls.
+5. Meta App ID for Instagram Stories: who registers it.
+6. Apple Developer accounts, paid team for push + HealthKit + Live Activities on real devices.
+7. Who has an Apple Watch (needed to demo live heart rate).
 
-## 10. Risks
+## 11. Risks
 | Risk | Mitigation |
 |---|---|
-| Background GPS killed or inaccurate | Test on device early (M1), accuracy filter, crash recovery |
-| No live workout builder on iPhone → calories | MET fallback + Watch data when available; label "estimated" |
-| AI returns junk / slow | Strict JSON schema, fixtures, timeout, manual-entry fallback, seeded demo photos |
-| Backend blocks others | Mock-first contracts, P3 ships beacon tables first |
+| Background GPS killed or inaccurate | Test on device at M1, accuracy filter, crash recovery |
+| Live HR/calories without a Watch on iPhone | MET estimate labelled "estimated", HR shown only when available |
+| Push/geo notification complexity | Edge Function + geohash; local-notification fallback for the demo |
+| Reel export slow or buggy | Prototype the renderer at M1 with sample images; still-image fallback |
+| AI returns junk / slow | Strict schema, fixtures, timeout, manual entry, seeded demo photos |
+| P2 overloaded | P2 ships mock contracts on Day 0; SHOULD items are first to cut |
+| API key leakage | Key only in the Edge Function |
 | Fake/abusive content | Report/block, face blur, verification, RLS |
-| API key leakage | Key only in the proxy, never in the app |
 | Merge conflicts | Feature folders, ignored `.xcodeproj`, small PRs |
-| Demo fails live | Seeded data, prerecorded backup, tested demo route on real device |
+| Live demo fails | Seeded data, recorded backup, rehearsed route on a real device |
 
-## 11. Definition of done (per feature)
-Runs on a real device; handles permission-denied, offline and empty states; has a mock/fixture path; merged to `main` with a short PR note; demo-able in under 30 seconds.
+## 12. Definition of done (per feature)
+Runs on a real device; handles permission-denied, offline and empty states; has a mock/fixture path; uses the design system; merged to `main` with a short PR note; demo-able in under 30 seconds.
