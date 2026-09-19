@@ -1,21 +1,23 @@
 import Foundation
 
-/// Composition root: the one place that decides fake vs live implementations.
-/// While `useFakeData` is true the app runs entirely on simulated GPS, health data and in-memory repositories.
+/// Picks fake vs live sensor implementations for the Activity flow.
+/// While `useFakeData` is true the app runs on a simulated GPS walk and fake heart rate/steps.
+/// Repositories are NOT created here: they come from SwiftUI's `Environment` (Person 2's backend).
 @MainActor
 enum AppEnvironment {
     static var useFakeData = true
 
-    static let activityRepository: any ActivityRepository = MockActivityRepository(seed: FakeData.activities)
-    static let cleanUpRepository: any CleanUpRepository = MockCleanUpRepository(seed: FakeData.cleanUps)
-
-    static func makeActivityViewModel(context: ActivityContext) -> ActivityViewModel {
+    static func makeActivityViewModel(
+        context: ActivityContext,
+        userId: UUID,
+        activities: any ActivityRepository
+    ) -> ActivityViewModel {
         ActivityViewModel(
             context: context,
+            userId: userId,
             location: useFakeData ? FakeLocationProvider() : LiveLocationProvider(),
-            health: FakeHealthProvider(),   // Live HealthKit provider arrives in Phase 3
-            activities: activityRepository,
-            cleanUps: cleanUpRepository
+            health: FakeHealthProvider(),   // Live HealthKit provider arrives with the HealthKit phase
+            activities: activities
         )
     }
 }

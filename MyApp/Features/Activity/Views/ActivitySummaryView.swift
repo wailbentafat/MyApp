@@ -37,11 +37,11 @@ struct ActivitySummaryView: View {
                         EcoMetric(label: "Weight", value: String(format: "%.1f", viewModel.impact.kg), unit: "kg")
                         EcoMetric(label: "Items", value: String(viewModel.impact.totalItems))
                     }
-                    let categories = WasteCategory.allCases.filter { (viewModel.impact.items[$0] ?? 0) > 0 }
+                    let categories = WasteType.allCases.filter { viewModel.impact.count(for: $0) > 0 }
                     if !categories.isEmpty {
                         HStack {
-                            ForEach(categories, id: \.self) { category in
-                                EcoChip(title: "\(category.label) \(viewModel.impact.items[category] ?? 0)",
+                            ForEach(categories) { category in
+                                EcoChip(title: "\(category.label) \(viewModel.impact.count(for: category))",
                                         systemImage: category.systemImage, isSelected: true)
                             }
                         }

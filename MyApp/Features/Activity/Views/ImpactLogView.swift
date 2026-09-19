@@ -34,10 +34,10 @@ struct ImpactLogView: View {
 
                 VStack(alignment: .leading, spacing: Eco.Space.m) {
                     Text("Items").font(.ecoTitleMedium).foregroundStyle(Eco.textSecondary)
-                    ForEach(WasteCategory.allCases, id: \.self) { category in
+                    ForEach(WasteType.allCases) { category in
                         stepperRow(
                             title: category.label,
-                            value: String(viewModel.impact.items[category] ?? 0),
+                            value: String(viewModel.impact.count(for: category)),
                             systemImage: category.systemImage,
                             minus: { viewModel.decrement(category) },
                             plus: { viewModel.increment(category) }

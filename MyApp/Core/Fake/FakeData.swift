@@ -1,32 +1,14 @@
 import CoreLocation
 import Foundation
 
-/// Fake data used while the real backend, sensors and Person 2's features are not plugged in.
+/// Fake data for the simulated GPS. (Clean-Ups, feed posts and users live in `Fixtures`, owned by Person 2.)
 enum FakeData {
-    static let cleanUps: [CleanUp] = [
-        CleanUp(
-            title: "Jardin d'Essai riverside",
-            latitude: 36.7472, longitude: 3.0765,
-            status: .scheduled,
-            wasteTypes: [.plastic, .glass],
-            gear: ["Heavy-duty gloves", "Trash picker", "3× 50 L bags"],
-            estimatedBags: 3
-        ),
-        CleanUp(
-            title: "Beach path near the pier",
-            latitude: 36.7610, longitude: 3.0500,
-            status: .open,
-            wasteTypes: [.plastic, .bulky],
-            gear: ["Gloves", "Trash picker", "5× 50 L bags"],
-            estimatedBags: 5
-        ),
-    ]
-
-    static var activities: [Activity] { [] }
-
-    /// A ~500 m loop the fake GPS walks around.
+    /// A ~500 m loop the fake GPS walks around, near the seeded Clean-Ups.
     static let walkCircuit = Circuit(
-        origin: CLLocationCoordinate2D(latitude: 36.7472, longitude: 3.0765),
+        origin: CLLocationCoordinate2D(
+            latitude: Fixtures.homeCoordinate.latitude,
+            longitude: Fixtures.homeCoordinate.longitude
+        ),
         offsets: [(0, 0), (0.0012, 0), (0.0014, 0.0010), (0.0006, 0.0016), (-0.0002, 0.0011), (0, 0)]
     )
 
@@ -51,7 +33,8 @@ enum FakeData {
         /// The point `distance` metres along the loop (wraps around).
         func location(atDistance distance: Double, speed: Double) -> CLLocation {
             let d = distance.truncatingRemainder(dividingBy: max(length, 1))
-            let index = (cumulative.lastIndex { $0 <= d } ?? 0).clamped(to: 0...(points.count - 2))
+            let last = points.count - 2
+            let index = min(max(cumulative.lastIndex { $0 <= d } ?? 0, 0), last)
             let segment = max(cumulative[index + 1] - cumulative[index], 0.001)
             let t = (d - cumulative[index]) / segment
             let a = points[index].coordinate, b = points[index + 1].coordinate
@@ -67,8 +50,4 @@ enum FakeData {
             )
         }
     }
-}
-
-private extension Int {
-    func clamped(to range: ClosedRange<Int>) -> Int { Swift.min(Swift.max(self, range.lowerBound), range.upperBound) }
 }

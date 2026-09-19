@@ -25,7 +25,7 @@ final class ActivityViewModel: Identifiable {
     private(set) var distanceMeters: Double = 0
     private(set) var elevationGain: Double = 0
     private(set) var kcal: Double = 0
-    private(set) var kcalSource: EnergySource = .estimated
+    private(set) var kcalIsEstimated = true
     private(set) var currentSpeed: Double = 0     // m/s, smoothed
     private(set) var heartRate: Int?
     private(set) var steps: Int?
@@ -36,12 +36,12 @@ final class ActivityViewModel: Identifiable {
     var title: String
 
     let context: ActivityContext
+    let userId: UUID
 
     // MARK: Dependencies
     @ObservationIgnored private let location: LocationProviding
     @ObservationIgnored private let health: HealthProviding
     @ObservationIgnored private let activities: ActivityRepository
-    @ObservationIgnored private let cleanUps: CleanUpRepository
     @ObservationIgnored private let now: () -> Date
 
     // MARK: Internals
@@ -58,17 +58,17 @@ final class ActivityViewModel: Identifiable {
 
     init(
         context: ActivityContext = .free,
+        userId: UUID,
         location: LocationProviding,
         health: HealthProviding,
         activities: ActivityRepository,
-        cleanUps: CleanUpRepository,
         now: @escaping () -> Date = { .now }
     ) {
         self.context = context
+        self.userId = userId
         self.location = location
         self.health = health
         self.activities = activities
-        self.cleanUps = cleanUps
         self.now = now
         self.title = context.cleanUp?.title ?? Self.defaultTitle(at: now())
     }
@@ -121,13 +121,14 @@ final class ActivityViewModel: Identifiable {
     func addBag() { impact.bags += 1 }
     func removeBag() { impact.bags = max(0, impact.bags - 1) }
     func adjustKg(by delta: Double) { impact.kg = max(0, (impact.kg + delta * 2).rounded() / 2) }
-    func increment(_ category: WasteCategory) { impact.items[category, default: 0] += 1 }
-    func decrement(_ category: WasteCategory) {
-        let value = max(0, (impact.items[category] ?? 0) - 1)
-        impact.items[category] = value == 0 ? nil : value
+    func increment(_ type: WasteType) { impact.itemCounts[type.rawValue, default: 0] += 1 }
+    func decrement(_ type: WasteType) {
+        let value = max(0, impact.count(for: type) - 1)
+        impact.itemCounts[type.rawValue] = value == 0 ? nil : value
     }
 
-    /// Persists the activity, saves the Health workout, closes the Clean-Up, then shows the summary.
+    /// Persists the activity locally and saves the Health workout, then shows the summary.
+    /// Uploading, closing the Clean-Up and publishing to the feed is the caller's job (`onFinished`).
     func save() async {
         guard state == .finished, !isSaving else { return }
         isSaving = true
@@ -136,9 +137,6 @@ final class ActivityViewModel: Identifiable {
         do {
             activity.healthWorkoutId = try? await health.saveWorkout(activity)
             try await activities.save(activity)
-            if let cleanUp = context.cleanUp {
-                try await cleanUps.complete(cleanUpId: cleanUp.id, activityId: activity.id)
-            }
             savedActivity = activity
             screen = .summary
         } catch {
@@ -161,7 +159,7 @@ final class ActivityViewModel: Identifiable {
         guard let last = lastLocation else {
             lastLocation = location
             altitudeAnchor = location.altitude
-            route.append(RoutePoint(location))
+            route.append(Self.routePoint(location))
             return
         }
 
@@ -172,12 +170,12 @@ final class ActivityViewModel: Identifiable {
         distanceMeters += step
         let speed = step / dt
         currentSpeed = currentSpeed == 0 ? speed : currentSpeed * 0.7 + speed * 0.3
-        if kcalSource == .estimated {
+        if kcalIsEstimated {
             kcal += Self.met(forSpeed: currentSpeed) * weightKg * dt / 3600
         }
         updateElevation(with: location.altitude)
         lastLocation = location
-        route.append(RoutePoint(location))
+        route.append(Self.routePoint(location))
     }
 
     func record(heartRate bpm: Int) {
@@ -190,7 +188,7 @@ final class ActivityViewModel: Identifiable {
 
     // MARK: - Derived values & display formatting
 
-    var coordinates: [CLLocationCoordinate2D] { route.map(\.coordinate) }
+    var coordinates: [CLLocationCoordinate2D] { route.map { $0.coordinate.clLocationCoordinate } }
     var isRunning: Bool { state == .running }
     var isPaused: Bool { state == .paused }
 
@@ -206,7 +204,7 @@ final class ActivityViewModel: Identifiable {
     var elevationText: String { String(Int(elevationGain.rounded())) }
     var heartRateText: String { heartRate.map(String.init) ?? "--" }
     var stepsText: String { steps.map(String.init) ?? "--" }
-    var energyLabel: String { kcalSource == .estimated ? "Calories (est.)" : "Calories" }
+    var energyLabel: String { kcalIsEstimated ? "Calories (est.)" : "Calories" }
 
     static func formatDuration(_ seconds: TimeInterval) -> String {
         let total = max(0, Int(seconds))
@@ -261,21 +259,30 @@ final class ActivityViewModel: Identifiable {
     }
 
     private func makeActivity() -> Activity {
-        Activity(
+        let trimmed = title.trimmingCharacters(in: .whitespaces)
+        return Activity(
+            id: UUID(),
+            userId: userId,
             cleanUpId: context.cleanUp?.id,
-            title: title.trimmingCharacters(in: .whitespaces).isEmpty ? Self.defaultTitle(at: startedAt ?? now()) : title,
             startedAt: startedAt ?? now(),
             endedAt: endedAt ?? now(),
-            movingSeconds: elapsed,
             route: route,
-            distanceMeters: distanceMeters,
-            elevationGainMeters: elevationGain,
+            distance: distanceMeters,
+            duration: elapsed,
+            elevation: elevationGain,
             kcal: kcal.rounded(),
-            kcalSource: kcalSource,
-            averageHeartRate: averageHeartRate,
-            steps: steps,
-            impact: impact
+            avgHR: averageHeartRate,
+            steps: steps ?? 0,
+            impactLog: impact,
+            afterPhotoURL: nil,
+            reelURL: nil,
+            title: trimmed.isEmpty ? Self.defaultTitle(at: startedAt ?? now()) : trimmed,
+            kcalIsEstimated: kcalIsEstimated
         )
+    }
+
+    private static func routePoint(_ location: CLLocation) -> RoutePoint {
+        RoutePoint(coordinate: Coordinate(location.coordinate), timestamp: location.timestamp)
     }
 
     private func beginSensors(startingAt date: Date) {

@@ -49,8 +49,8 @@ struct RecordSetupView: View {
     @ViewBuilder
     private var background: some View {
         if let cleanUp = viewModel.context.cleanUp {
-            Map(initialPosition: .camera(MapCamera(centerCoordinate: cleanUp.coordinate, distance: 900))) {
-                Marker(cleanUp.title, systemImage: "leaf.fill", coordinate: cleanUp.coordinate)
+            Map(initialPosition: .camera(MapCamera(centerCoordinate: cleanUp.coordinate.clLocationCoordinate, distance: 900))) {
+                Marker(cleanUp.title, systemImage: "leaf.fill", coordinate: cleanUp.coordinate.clLocationCoordinate)
                     .tint(Eco.primary)
             }
             .mapStyle(.standard(elevation: .flat, pointsOfInterest: .excludingAll))
@@ -71,11 +71,11 @@ private struct CleanUpBanner: View {
                 .foregroundStyle(Eco.textPrimary)
             if !cleanUp.wasteTypes.isEmpty {
                 HStack {
-                    ForEach(cleanUp.wasteTypes, id: \.self) { EcoChip(title: $0.label, systemImage: $0.systemImage) }
+                    ForEach(cleanUp.wasteTypes) { EcoChip(title: $0.label, systemImage: $0.systemImage) }
                 }
             }
             if !cleanUp.gear.isEmpty {
-                Text("Bring: " + cleanUp.gear.joined(separator: ", "))
+                Text("Bring: " + cleanUp.gear.map(\.name).joined(separator: ", "))
                     .font(.ecoBodySmall)
                     .foregroundStyle(Eco.textSecondary)
             }

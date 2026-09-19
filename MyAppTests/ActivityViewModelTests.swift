@@ -21,6 +21,13 @@ private final class StubHealth: HealthProviding {
     func saveWorkout(_ activity: Activity) async throws -> UUID? { savedWorkouts += 1; return UUID() }
 }
 
+private actor StubActivities: ActivityRepository {
+    private(set) var saved: [Activity] = []
+    func save(_ activity: Activity) async throws { saved.append(activity) }
+    func history(userId: UUID) async throws -> [Activity] { saved.filter { $0.userId == userId } }
+    func upload(_ activity: Activity) async throws -> Activity { activity }
+}
+
 private final class Clock: @unchecked Sendable {
     var date = Date(timeIntervalSince1970: 1_800_000_000)
     func advance(_ seconds: TimeInterval) { date = date.addingTimeInterval(seconds) }
@@ -31,22 +38,21 @@ private final class Clock: @unchecked Sendable {
 @MainActor
 final class ActivityViewModelTests: XCTestCase {
     private var clock = Clock()
-    private var activities = MockActivityRepository()
-    private var cleanUps = MockCleanUpRepository()
+    private var activities = StubActivities()
     private var health = StubHealth()
+    private let userId = UUID()
 
     override func setUp() async throws {
         clock = Clock()
-        activities = MockActivityRepository()
-        cleanUps = MockCleanUpRepository()
+        activities = StubActivities()
         health = StubHealth()
     }
 
     private func makeViewModel(context: ActivityContext = .free) -> ActivityViewModel {
         let clock = clock
         return ActivityViewModel(
-            context: context, location: StubLocation(), health: health,
-            activities: activities, cleanUps: cleanUps, now: { clock.date }
+            context: context, userId: userId, location: StubLocation(), health: health,
+            activities: activities, now: { clock.date }
         )
     }
 
@@ -152,7 +158,7 @@ final class ActivityViewModelTests: XCTestCase {
         vm.handle(fix(0, at: 0))
         vm.handle(fix(2, at: 10))    // ≈ 22 m in 10 s → 2.2 m/s
         XCTAssertGreaterThan(vm.kcal, 0)
-        XCTAssertEqual(vm.kcalSource, .estimated)
+        XCTAssertTrue(vm.kcalIsEstimated)
     }
 
     func testElevationGainIgnoresNoiseAndDescents() {
@@ -179,9 +185,10 @@ final class ActivityViewModelTests: XCTestCase {
         let vm = makeViewModel()
         vm.increment(.plastic); vm.increment(.plastic)
         vm.decrement(.plastic)
-        XCTAssertEqual(vm.impact.items[.plastic], 1)
+        XCTAssertEqual(vm.impact.count(for: .plastic), 1)
         vm.decrement(.plastic); vm.decrement(.plastic)
-        XCTAssertNil(vm.impact.items[.plastic])
+        XCTAssertEqual(vm.impact.count(for: .plastic), 0)
+        XCTAssertNil(vm.impact.itemCounts[WasteType.plastic.rawValue])
 
         vm.adjustKg(by: 0.5); vm.adjustKg(by: 0.5)
         XCTAssertEqual(vm.impact.kg, 1.0, accuracy: 0.001)
@@ -203,17 +210,17 @@ final class ActivityViewModelTests: XCTestCase {
     }
 
     func testDefaultTitleUsesCleanUpTitle() {
-        let cleanUp = CleanUp(title: "Park corner", latitude: 36.7, longitude: 3.0)
-        XCTAssertEqual(makeViewModel(context: .cleanUp(cleanUp)).title, "Park corner")
+        let cleanUp = Fixtures.seedCleanUps()[0]
+        XCTAssertEqual(makeViewModel(context: .cleanUp(cleanUp)).title, cleanUp.title)
         XCTAssertTrue(makeViewModel().title.hasSuffix("Clean-Up"))
     }
 
     // Saving
 
-    func testSaveStoresActivitySavesWorkoutAndCompletesCleanUp() async throws {
-        let cleanUp = CleanUp(title: "Park corner", latitude: 36.7, longitude: 3.0)
-        cleanUps = MockCleanUpRepository(seed: [cleanUp])
+    func testSaveStoresActivityWithSharedModelFields() async throws {
+        let cleanUp = Fixtures.seedCleanUps()[0]
         let vm = makeViewModel(context: .cleanUp(cleanUp))
+        vm.title = "Riverside sweep"
         vm.start()
         vm.handle(fix(0, at: 0)); vm.handle(fix(2, at: 10))
         vm.addBag()
@@ -223,13 +230,16 @@ final class ActivityViewModelTests: XCTestCase {
         await vm.save()
 
         XCTAssertEqual(vm.screen, .summary)
-        let history = try await activities.history()
+        let history = try await activities.history(userId: userId)
         XCTAssertEqual(history.count, 1)
-        XCTAssertEqual(history.first?.cleanUpId, cleanUp.id)
-        XCTAssertEqual(history.first?.impact.bags, 1)
-        XCTAssertNotNil(history.first?.healthWorkoutId)
+        let activity = try XCTUnwrap(history.first)
+        XCTAssertEqual(activity.cleanUpId, cleanUp.id)
+        XCTAssertEqual(activity.title, "Riverside sweep")
+        XCTAssertEqual(activity.impactLog.bags, 1)
+        XCTAssertEqual(activity.duration, 10, accuracy: 0.01)
+        XCTAssertGreaterThan(activity.distance, 20)
+        XCTAssertTrue(activity.kcalIsEstimated)
+        XCTAssertNotNil(activity.healthWorkoutId)
         XCTAssertEqual(health.savedWorkouts, 1)
-        let updated = try await cleanUps.cleanUp(id: cleanUp.id)
-        XCTAssertEqual(updated?.status, .done)
     }
 }

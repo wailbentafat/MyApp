@@ -2,7 +2,7 @@ name: MyApp
 options:
   bundleIdPrefix: com.wailbentafat
   deploymentTarget:
-    iOS: "17.0"
+    iOS: "26.0"
 configFiles:
   Debug: Config/Shared.xcconfig
   Release: Config/Shared.xcconfig
