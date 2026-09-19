@@ -1,136 +1,113 @@
 import MapKit
 import SwiftUI
 
+/// Maps tab. Owns only the view model; all state and logic live in `MapViewModel`.
 struct CleanUpMapView: View {
     @Binding var selectedTab: AppTab
 
     @Environment(\.cleanUpRepository) private var cleanUpRepository
-    @State private var locationProvider = LocationFixProvider()
-
-    @State private var cleanUps: [CleanUp] = []
-    @State private var statusFilter: CleanUpStatus?
-    @State private var selectedCleanUp: CleanUp?
-    @State private var cameraPosition: MapCameraPosition = .region(
-        MKCoordinateRegion(
-            center: Fixtures.homeCoordinate.clLocationCoordinate,
-            span: MKCoordinateSpan(latitudeDelta: 0.03, longitudeDelta: 0.03)
-        )
-    )
-
-    private var filtered: [CleanUp] {
-        guard let statusFilter else { return cleanUps }
-        return cleanUps.filter { $0.status == statusFilter }
-    }
+    @State private var viewModel: MapViewModel?
 
     var body: some View {
-        ZStack(alignment: .top) {
-            Map(position: $cameraPosition) {
-                ForEach(filtered) { cleanUp in
-                    Annotation(cleanUp.title, coordinate: cleanUp.coordinate.clLocationCoordinate) {
-                        CleanUpPin(status: cleanUp.status)
-                            .onTapGesture { selectedCleanUp = cleanUp }
+        ZStack {
+            Eco.background.ignoresSafeArea()
+            if let viewModel {
+                MapContent(viewModel: viewModel, selectedTab: $selectedTab)
+            }
+        }
+        .toolbar(.hidden, for: .navigationBar)
+        .task {
+            guard viewModel == nil else { return }
+            let model = MapViewModel(repository: cleanUpRepository, location: LocationFixProvider())
+            viewModel = model
+            await model.load()
+            await model.subscribe()
+        }
+    }
+}
+
+private struct MapContent: View {
+    @Bindable var viewModel: MapViewModel
+    @Binding var selectedTab: AppTab
+
+    @State private var position: MapCameraPosition = .automatic
+
+    var body: some View {
+        ZStack {
+            Map(position: $position) {
+                ForEach(viewModel.visibleCleanUps) { cleanUp in
+                    Annotation(cleanUp.title, coordinate: cleanUp.coordinate.clLocationCoordinate, anchor: .bottom) {
+                        CleanUpMarker(cleanUp: cleanUp, bagsText: viewModel.bagsText(for: cleanUp))
+                            .onTapGesture { viewModel.selectedCleanUp = cleanUp }
                     }
                 }
             }
-            .mapControls {
-                MapUserLocationButton()
-                MapCompass()
-            }
-            .ignoresSafeArea(edges: .bottom)
+            .mapControls { MapCompass() }
+            .ignoresSafeArea()
 
-            filterBar
-        }
-        .navigationTitle("Clean-Ups")
-        .navigationBarTitleDisplayMode(.inline)
-        .toolbar {
-            ToolbarItem(placement: .topBarTrailing) {
-                Button {
-                    Task { await centerOnMe() }
-                } label: {
-                    EcoSymbol("location.fill")
+            VStack(spacing: Eco.Space.s) {
+                EcoTopBar(title: "Maps") {
+                    EmptyView()
+                } trailing: {
+                    EmptyView()
                 }
+                .background(.ultraThinMaterial)
+
+                filterBar
+
+                Spacer()
+
+                HStack {
+                    Spacer()
+                    EcoCircleButton(systemImage: "location.fill", label: "Center on my location", size: 52) {
+                        Task { await viewModel.centerOnMe() }
+                    }
+                }
+                .padding(.horizontal, Eco.Space.l)
+                .padding(.bottom, Eco.Space.s)
             }
         }
-        .sheet(item: $selectedCleanUp) { cleanUp in
+        .onChange(of: viewModel.target, initial: true) { _, target in
+            withAnimation(.easeInOut(duration: 0.6)) {
+                position = .region(MKCoordinateRegion(
+                    center: target.center.clLocationCoordinate,
+                    span: MKCoordinateSpan(latitudeDelta: target.span, longitudeDelta: target.span)
+                ))
+            }
+        }
+        .sheet(item: $viewModel.selectedCleanUp) { cleanUp in
             NavigationStack {
                 CleanUpDetailView(cleanUp: cleanUp, selectedTab: $selectedTab)
             }
             .presentationDetents([.medium, .large])
             .presentationDragIndicator(.visible)
+            .ecoTheme()
         }
-        .task { await load() }
-        .task { await subscribeToChanges() }
     }
 
     private var filterBar: some View {
         ScrollView(.horizontal, showsIndicators: false) {
             HStack(spacing: Eco.Space.s) {
-                FilterChip(title: "All", isSelected: statusFilter == nil) { statusFilter = nil }
-                ForEach(CleanUpStatus.allCases, id: \.self) { status in
-                    FilterChip(title: status.label, isSelected: statusFilter == status) { statusFilter = status }
+                ForEach(MapViewModel.filters, id: \.self) { status in
+                    Button {
+                        viewModel.select(status)
+                    } label: {
+                        Text(viewModel.chipTitle(for: status))
+                            .font(.ecoLabelMedium)
+                            .lineLimit(1)
+                            .fixedSize()
+                            .foregroundStyle(viewModel.isSelected(status) ? Eco.onButton : Eco.textPrimary)
+                            .padding(.horizontal, Eco.Space.m)
+                            .padding(.vertical, Eco.Space.s)
+                            .background(viewModel.isSelected(status) ? Eco.buttonFill : Eco.surface, in: Capsule())
+                            .overlay(Capsule().stroke(Eco.border, lineWidth: viewModel.isSelected(status) ? 0 : 1))
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityAddTraits(viewModel.isSelected(status) ? .isSelected : [])
                 }
             }
-            .padding(Eco.Space.m)
+            .padding(.horizontal, Eco.Space.l)
         }
-        .background(.ultraThinMaterial)
-    }
-
-    private func load() async {
-        cleanUps = (try? await cleanUpRepository.all()) ?? []
-    }
-
-    private func subscribeToChanges() async {
-        for await updated in cleanUpRepository.changes() {
-            cleanUps = updated
-            if let selectedCleanUp, let fresh = updated.first(where: { $0.id == selectedCleanUp.id }) {
-                self.selectedCleanUp = fresh
-            }
-        }
-    }
-
-    private func centerOnMe() async {
-        locationProvider.requestWhenInUseAuthorization()
-        guard let fix = await locationProvider.requestFix() else { return }
-        withAnimation {
-            cameraPosition = .region(
-                MKCoordinateRegion(center: fix.coordinate.clLocationCoordinate, span: MKCoordinateSpan(latitudeDelta: 0.02, longitudeDelta: 0.02))
-            )
-        }
-    }
-}
-
-private struct CleanUpPin: View {
-    let status: CleanUpStatus
-
-    var body: some View {
-        ZStack {
-            Circle().fill(tint).frame(width: 36, height: 36)
-            EcoSymbol("leaf.fill", size: 18).foregroundStyle(Eco.onPrimary)
-        }
-        .overlay(Circle().stroke(.white, lineWidth: 2))
-        .shadow(radius: 2)
-    }
-
-    private var tint: Color {
-        switch status {
-        case .open: Eco.primary
-        case .scheduled: Eco.info
-        case .live: Eco.warning
-        case .done: Eco.textHint
-        }
-    }
-}
-
-private struct FilterChip: View {
-    let title: String
-    let isSelected: Bool
-    let action: () -> Void
-
-    var body: some View {
-        Button(action: action) {
-            EcoChip(title: title, isSelected: isSelected)
-        }
-        .buttonStyle(.plain)
     }
 }
 

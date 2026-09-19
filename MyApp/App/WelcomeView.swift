@@ -52,6 +52,7 @@ struct WelcomeView: View {
                 }
                 .buttonStyle(.eco)
                 .disabled(appSession.isSigningIn)
+                .frame(maxWidth: 300)
 
                 Text("Sign-in and backend are simulated for this build.")
                     .font(.ecoLabelSmall)

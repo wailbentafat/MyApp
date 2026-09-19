@@ -1,5 +1,6 @@
 import SwiftUI
 
+/// Clean-Up detail sheet. Owns only the view model; RSVP, gear and finishing logic live in `CleanUpDetailViewModel`.
 struct CleanUpDetailView: View {
     let cleanUp: CleanUp
     @Binding var selectedTab: AppTab
@@ -10,16 +11,52 @@ struct CleanUpDetailView: View {
     @Environment(\.appSession) private var appSession
     @Environment(\.dismiss) private var dismiss
 
-    @State private var isJoining = false
-    @State private var showActivitySheet = false
-    @State private var committedGear: Set<String> = []
+    @State private var viewModel: CleanUpDetailViewModel?
+    @State private var showActivity = false
 
-    private var currentUserId: UUID? { appSession.currentUser?.id }
-    private var isAttending: Bool {
-        guard let currentUserId else { return false }
-        return cleanUp.attendeeIds.contains(currentUserId)
+    var body: some View {
+        ZStack {
+            Eco.background.ignoresSafeArea()
+            if let viewModel {
+                DetailContent(viewModel: viewModel, onStartActivity: { showActivity = true })
+            }
+        }
+        .navigationTitle("Clean-Up")
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItem(placement: .cancellationAction) {
+                Button("Close") { dismiss() }
+            }
+        }
+        .task {
+            guard viewModel == nil else { return }
+            let coordinator = ActivityCompletionCoordinator(
+                activities: activityRepository, cleanUps: cleanUpRepository, feed: feedService
+            )
+            viewModel = CleanUpDetailViewModel(
+                cleanUp: cleanUp, user: appSession.currentUser,
+                repository: cleanUpRepository, completion: coordinator
+            )
+        }
+        .onChange(of: cleanUp) { _, fresh in viewModel?.update(fresh) }
+        .fullScreenCover(isPresented: $showActivity) {
+            ActivityFlowLauncher(cleanUp: viewModel?.cleanUp ?? cleanUp) { activity in
+                Task {
+                    await viewModel?.finish(activity)
+                    selectedTab = .home
+                    dismiss()
+                }
+            }
+            .ecoTheme()
+        }
     }
-    private var isHost: Bool { cleanUp.hostId == currentUserId }
+}
+
+private struct DetailContent: View {
+    let viewModel: CleanUpDetailViewModel
+    var onStartActivity: () -> Void
+
+    private var cleanUp: CleanUp { viewModel.cleanUp }
 
     var body: some View {
         ScrollView {
@@ -44,7 +81,7 @@ struct CleanUpDetailView: View {
                     }
                 }
 
-                HStack {
+                EcoFlowLayout {
                     ForEach(cleanUp.wasteTypes) { type in
                         EcoChip(title: type.label, systemImage: type.systemImage)
                     }
@@ -53,7 +90,7 @@ struct CleanUpDetailView: View {
                 HStack(spacing: Eco.Space.m) {
                     EcoStatTile(value: "\(cleanUp.estimatedBags)", label: "Bags", systemImage: "bag.fill")
                     EcoStatTile(value: cleanUp.severity.label, label: "Severity", systemImage: "gauge.with.dots.needle.67percent")
-                    EcoStatTile(value: attendeeLabel, label: "Attendees", systemImage: "person.2.fill")
+                    EcoStatTile(value: viewModel.attendeeLabel, label: "Attendees", systemImage: "person.2.fill")
                 }
 
                 gearSection
@@ -67,18 +104,6 @@ struct CleanUpDetailView: View {
                 actions
             }
             .padding(Eco.Space.l)
-        }
-        .ecoScreenBackground()
-        .navigationTitle("Clean-Up")
-        .navigationBarTitleDisplayMode(.inline)
-        .toolbar {
-            ToolbarItem(placement: .cancellationAction) {
-                Button("Close") { dismiss() }
-            }
-        }
-        .fullScreenCover(isPresented: $showActivitySheet) {
-            ActivityFlowLauncher(cleanUp: cleanUp, onFinished: handleFinishedActivity)
-                .ecoTheme()
         }
     }
 
@@ -98,31 +123,24 @@ struct CleanUpDetailView: View {
         .clipShape(RoundedRectangle(cornerRadius: Eco.Radius.card))
     }
 
-    private var attendeeLabel: String {
-        if let capacity = cleanUp.capacity {
-            return "\(cleanUp.attendeeCount)/\(capacity)"
-        }
-        return "\(cleanUp.attendeeCount)"
-    }
-
     private var gearSection: some View {
         VStack(alignment: .leading, spacing: Eco.Space.m) {
             EcoSectionHeader(title: "Gear checklist")
-            VStack(spacing: Eco.Space.s) {
+            VStack(spacing: Eco.Space.m) {
                 ForEach(cleanUp.gear) { item in
                     Button {
-                        toggleGear(item.name)
+                        viewModel.toggleGear(item)
                     } label: {
                         HStack {
-                            EcoSymbol(committedGear.contains(item.name) ? "checkmark.circle.fill" : "circle")
-                                .foregroundStyle(committedGear.contains(item.name) ? Eco.primary : Eco.textHint)
+                            EcoSymbol(viewModel.isCommitted(item) ? "checkmark.circle.fill" : "circle", size: 22)
+                                .foregroundStyle(viewModel.isCommitted(item) ? Eco.primary : Eco.textHint)
                             Text(item.name)
                                 .font(.ecoBodyMedium)
                                 .foregroundStyle(Eco.textBody)
                             Spacer()
-                            Text("\(item.committedCount + (committedGear.contains(item.name) ? 1 : 0)) bringing")
+                            Text(viewModel.bringingText(for: item))
                                 .font(.ecoLabelSmall)
-                                .foregroundStyle(Eco.textHint)
+                                .foregroundStyle(Eco.textSecondary)
                         }
                     }
                     .buttonStyle(.plain)
@@ -132,58 +150,32 @@ struct CleanUpDetailView: View {
         }
     }
 
+    /// White primary button for the main action, outlined for the secondary one.
     private var actions: some View {
         VStack(spacing: Eco.Space.m) {
-            if cleanUp.status != .done {
+            if viewModel.canStartActivity {
+                Button(action: onStartActivity) {
+                    EcoLabel("Start Activity", systemImage: "play.fill", size: 18, spacing: 8)
+                }
+                .buttonStyle(.eco)
+            }
+
+            if !viewModel.isDone {
                 Button {
-                    Task { await toggleRSVP() }
+                    Task { await viewModel.toggleRSVP() }
                 } label: {
-                    if isJoining {
-                        ProgressView().tint(isAttending ? Eco.primary : Eco.onPrimary)
+                    if viewModel.isJoining {
+                        ProgressView().tint(viewModel.isAttending ? Eco.buttonFill : Eco.onButton)
                     } else {
-                        Text(isAttending ? "Leave Clean-Up" : (cleanUp.isFull ? "Full" : "RSVP — I'm in"))
+                        Text(viewModel.rsvpTitle)
                     }
                 }
-                .buttonStyle(isAttending ? .ecoSecondary : .eco)
-                .disabled(isJoining || (!isAttending && cleanUp.isFull))
-            }
-
-            if isAttending || isHost, cleanUp.status == .open || cleanUp.status == .scheduled || cleanUp.status == .live {
-                Button {
-                    showActivitySheet = true
-                } label: {
-                    EcoLabel("Start Activity", systemImage: "play.fill")
-                }
-                .buttonStyle(.ecoSecondary)
+                .buttonStyle(viewModel.isAttending ? .ecoSecondary : .eco)
+                .disabled(viewModel.isRSVPDisabled)
             }
         }
-    }
-
-    private func toggleGear(_ name: String) {
-        if committedGear.contains(name) {
-            committedGear.remove(name)
-        } else {
-            committedGear.insert(name)
-        }
-    }
-
-    private func toggleRSVP() async {
-        guard let userId = currentUserId else { return }
-        isJoining = true
-        defer { isJoining = false }
-        _ = try? await cleanUpRepository.setRSVP(cleanUpId: cleanUp.id, userId: userId, joining: !isAttending)
-    }
-
-    private func handleFinishedActivity(_ activity: Activity) {
-        Task {
-            try? await activityRepository.upload(activity)
-            let updated = (try? await cleanUpRepository.complete(cleanUpId: cleanUp.id, activityId: activity.id)) ?? cleanUp
-            if let user = appSession.currentUser {
-                await feedService.publish(activity: activity, cleanUp: updated, author: user)
-            }
-            selectedTab = .home
-            dismiss()
-        }
+        .frame(maxWidth: 420)
+        .frame(maxWidth: .infinity)
     }
 }
 

@@ -30,6 +30,9 @@ struct CleanUpCard: View {
     var onOpen: () -> Void
     var onRSVP: () -> Void
 
+    /// Photo (150) + body: all Clean-Up cards share this exact height.
+    static let bodyHeight: CGFloat = 176
+
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             Button(action: onOpen) {
@@ -43,14 +46,23 @@ struct CleanUpCard: View {
                 Text(cleanUp.title)
                     .font(.ecoHeadlineSmall)
                     .foregroundStyle(Eco.textPrimary)
-                    .lineLimit(2)
+                    .lineLimit(1)
                 EcoLabel(subtitle, systemImage: "mappin.and.ellipse")
                     .font(.ecoBodySmall)
                     .foregroundStyle(Eco.textSecondary)
+                    .lineLimit(1)
 
-                EcoFlowLayout(spacing: 6, lineSpacing: 6) {
-                    ForEach(cleanUp.wasteTypes) { EcoChip(title: $0.label, systemImage: $0.systemImage) }
+                // One fixed-height row (max 2 chips + "+N") so every card has exactly the same size.
+                HStack(spacing: 6) {
+                    ForEach(cleanUp.wasteTypes.prefix(2)) { EcoChip(title: $0.label, systemImage: $0.systemImage) }
+                    if cleanUp.wasteTypes.count > 2 {
+                        EcoChip(title: "+\(cleanUp.wasteTypes.count - 2)")
+                    }
                 }
+                .frame(maxWidth: .infinity, minHeight: 34, maxHeight: 34, alignment: .leading)
+                .clipped()
+
+                Spacer(minLength: 0)
 
                 HStack {
                     EcoLabel("\(cleanUp.estimatedBags) bags", systemImage: "bag.fill")
@@ -67,6 +79,7 @@ struct CleanUpCard: View {
                 }
             }
             .padding(Eco.Space.m)
+            .frame(height: Self.bodyHeight, alignment: .top)
         }
         .background(Eco.surface, in: RoundedRectangle(cornerRadius: Eco.Radius.card))
         .clipShape(RoundedRectangle(cornerRadius: Eco.Radius.card))

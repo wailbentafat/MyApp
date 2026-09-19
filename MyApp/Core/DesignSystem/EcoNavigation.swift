@@ -156,7 +156,7 @@ struct EcoBanner: View {
             Spacer(minLength: 0)
         }
         .padding(Eco.Space.m)
-        .frame(maxWidth: .infinity, alignment: .leading)
+        .frame(maxWidth: .infinity, minHeight: 72, alignment: .leading)
         .background(Eco.surface, in: RoundedRectangle(cornerRadius: Eco.Radius.field))
     }
 }
