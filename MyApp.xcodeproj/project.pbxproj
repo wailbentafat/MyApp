@@ -8,6 +8,10 @@
 
 /* Begin PBXBuildFile section */
 		1F991ACB89FC9764C6153EB1 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C6082BA848650722FAAD4D12 /* ContentView.swift */; };
+		6F1C7C8A27813330017F0947 /* EcoColors.swift in Sources */ = {isa = PBXBuildFile; fileRef = ABAA02BF4ABBB71885590CE9 /* EcoColors.swift */; };
+		7E4E8B19E943691DE6E24BC7 /* EcoComponents.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1DFDFC4FDEAD6F56BFB0BDB /* EcoComponents.swift */; };
+		81E063F05BEFCD89EF7DB374 /* EcoTypography.swift in Sources */ = {isa = PBXBuildFile; fileRef = A21E0B4E39E8E7A719B0BB83 /* EcoTypography.swift */; };
+		8EFABC7A069D138DC9823672 /* ecoplog_app_architecture_features_specification.md in Resources */ = {isa = PBXBuildFile; fileRef = 51C018EFD79819C1E69B5E72 /* ecoplog_app_architecture_features_specification.md */; };
 		D3D6F9A8DB516321EA005C39 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = AA5ED588DFDB7A34E47E6C36 /* Assets.xcassets */; };
 		FCA16A9A87B1018E6AC5A76C /* MyAppApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 39CD17436AE4D69811BA8EDA /* MyAppApp.swift */; };
 /* End PBXBuildFile section */
@@ -15,8 +19,12 @@
 /* Begin PBXFileReference section */
 		237B2E48D363E5FB9B47CB07 /* MyApp.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = MyApp.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		39CD17436AE4D69811BA8EDA /* MyAppApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MyAppApp.swift; sourceTree = "<group>"; };
+		51C018EFD79819C1E69B5E72 /* ecoplog_app_architecture_features_specification.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = ecoplog_app_architecture_features_specification.md; sourceTree = "<group>"; };
 		6D208CA167C89CC81C08AAEE /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
+		A21E0B4E39E8E7A719B0BB83 /* EcoTypography.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EcoTypography.swift; sourceTree = "<group>"; };
 		AA5ED588DFDB7A34E47E6C36 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		ABAA02BF4ABBB71885590CE9 /* EcoColors.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EcoColors.swift; sourceTree = "<group>"; };
+		B1DFDFC4FDEAD6F56BFB0BDB /* EcoComponents.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EcoComponents.swift; sourceTree = "<group>"; };
 		C6082BA848650722FAAD4D12 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
@@ -26,8 +34,10 @@
 			children = (
 				AA5ED588DFDB7A34E47E6C36 /* Assets.xcassets */,
 				C6082BA848650722FAAD4D12 /* ContentView.swift */,
+				51C018EFD79819C1E69B5E72 /* ecoplog_app_architecture_features_specification.md */,
 				6D208CA167C89CC81C08AAEE /* Info.plist */,
 				39CD17436AE4D69811BA8EDA /* MyAppApp.swift */,
+				689AB1BD9B3FE27B3D278C8D /* Core */,
 			);
 			path = MyApp;
 			sourceTree = "<group>";
@@ -38,6 +48,24 @@
 				0C9FB5F36A7BCD7CEEF78946 /* MyApp */,
 				FF89FD894BEFEC90C393D9C4 /* Products */,
 			);
+			sourceTree = "<group>";
+		};
+		689AB1BD9B3FE27B3D278C8D /* Core */ = {
+			isa = PBXGroup;
+			children = (
+				85BFBBAD38E0B9D1C83D9650 /* DesignSystem */,
+			);
+			path = Core;
+			sourceTree = "<group>";
+		};
+		85BFBBAD38E0B9D1C83D9650 /* DesignSystem */ = {
+			isa = PBXGroup;
+			children = (
+				ABAA02BF4ABBB71885590CE9 /* EcoColors.swift */,
+				B1DFDFC4FDEAD6F56BFB0BDB /* EcoComponents.swift */,
+				A21E0B4E39E8E7A719B0BB83 /* EcoTypography.swift */,
+			);
+			path = DesignSystem;
 			sourceTree = "<group>";
 		};
 		FF89FD894BEFEC90C393D9C4 /* Products */ = {
@@ -105,6 +133,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				D3D6F9A8DB516321EA005C39 /* Assets.xcassets in Resources */,
+				8EFABC7A069D138DC9823672 /* ecoplog_app_architecture_features_specification.md in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -116,6 +145,9 @@
 			buildActionMask = 2147483647;
 			files = (
 				1F991ACB89FC9764C6153EB1 /* ContentView.swift in Sources */,
+				6F1C7C8A27813330017F0947 /* EcoColors.swift in Sources */,
+				7E4E8B19E943691DE6E24BC7 /* EcoComponents.swift in Sources */,
+				81E063F05BEFCD89EF7DB374 /* EcoTypography.swift in Sources */,
 				FCA16A9A87B1018E6AC5A76C /* MyAppApp.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
