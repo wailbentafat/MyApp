@@ -13,6 +13,11 @@ targets:
       path: MyApp/Info.plist
       properties:
         UILaunchScreen: {}
+        NSCameraUsageDescription: "EcoPlog uses the camera to photograph pollution when you Spot a Clean-Up."
+        NSLocationWhenInUseUsageDescription: "EcoPlog uses your location to geotag Spots and show Clean-Ups near you on the map."
+        NSPhotoLibraryAddUsageDescription: "EcoPlog can save your Before/After photos and reels to your photo library."
+        LSApplicationQueriesSchemes:
+          - instagram-stories
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.wailbentafat.MyApp

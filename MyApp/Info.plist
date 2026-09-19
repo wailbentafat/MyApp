@@ -18,6 +18,16 @@
 	<string>1.0</string>
 	<key>CFBundleVersion</key>
 	<string>1</string>
+	<key>LSApplicationQueriesSchemes</key>
+	<array>
+		<string>instagram-stories</string>
+	</array>
+	<key>NSCameraUsageDescription</key>
+	<string>EcoPlog uses the camera to photograph pollution when you Spot a Clean-Up.</string>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>EcoPlog uses your location to geotag Spots and show Clean-Ups near you on the map.</string>
+	<key>NSPhotoLibraryAddUsageDescription</key>
+	<string>EcoPlog can save your Before/After photos and reels to your photo library.</string>
 	<key>UILaunchScreen</key>
 	<dict/>
 </dict>
