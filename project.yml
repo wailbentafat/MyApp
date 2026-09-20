@@ -1,6 +1,6 @@
 name: MyApp
 options:
-  bundleIdPrefix: com.wailbentafat
+  bundleIdPrefix: com.zch92142dev
   deploymentTarget:
     iOS: "26.0"
 configFiles:
@@ -10,6 +10,8 @@ settings:
   base:
     # Swift 5 language mode: CoreLocation/HealthKit delegates fight Swift 6 strict concurrency.
     SWIFT_VERSION: "5.0"
+    DEVELOPMENT_TEAM: R4SKFM85SL
+    CODE_SIGN_STYLE: Automatic
 targets:
   MyApp:
     type: application
@@ -20,11 +22,6 @@ targets:
           - "**/*.md"
     dependencies:
       - target: EcoPlogWidgets
-    entitlements:
-      path: MyApp/MyApp.entitlements
-      properties:
-        com.apple.developer.healthkit: true
-        com.apple.developer.healthkit.access: []
     info:
       path: MyApp/Info.plist
       properties:
@@ -47,7 +44,7 @@ targets:
         NSPhotoLibraryAddUsageDescription: hɛal saves your cleanup reel to your photo library.
     settings:
       base:
-        PRODUCT_BUNDLE_IDENTIFIER: com.wailbentafat.MyApp
+        PRODUCT_BUNDLE_IDENTIFIER: com.zch92142dev.MyApp
         TARGETED_DEVICE_FAMILY: "1,2"
         MARKETING_VERSION: "1.0"
         CURRENT_PROJECT_VERSION: "1"
@@ -69,7 +66,7 @@ targets:
           NSExtensionPointIdentifier: com.apple.widgetkit-extension
     settings:
       base:
-        PRODUCT_BUNDLE_IDENTIFIER: com.wailbentafat.MyApp.Widgets
+        PRODUCT_BUNDLE_IDENTIFIER: com.zch92142dev.MyApp.Widgets
         TARGETED_DEVICE_FAMILY: "1,2"
         MARKETING_VERSION: "1.0"
         CURRENT_PROJECT_VERSION: "1"
@@ -82,5 +79,5 @@ targets:
       - target: MyApp
     settings:
       base:
-        PRODUCT_BUNDLE_IDENTIFIER: com.wailbentafat.MyAppTests
+        PRODUCT_BUNDLE_IDENTIFIER: com.zch92142dev.MyAppTests
         GENERATE_INFOPLIST_FILE: YES
