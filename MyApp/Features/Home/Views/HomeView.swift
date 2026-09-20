@@ -11,16 +11,20 @@ struct HomeView: View {
     @Environment(\.activityRepository) private var activityRepository
     @Environment(\.shareService) private var shareService
     @Environment(\.appSession) private var appSession
+    @Environment(\.inboxService) private var inboxService
 
     @State private var viewModel: HomeViewModel?
     @State private var openedCleanUp: CleanUp?
+    @State private var showNotifications = false
 
     var body: some View {
         VStack(spacing: 0) {
             EcoTopBar(title: AppInfo.name) {
                 EcoCircleButton(systemImage: "camera.viewfinder", label: "Spot pollution", action: onSpot)
             } trailing: {
-                EcoCircleButton(systemImage: "bell", label: "Notifications", badge: true) {}
+                EcoCircleButton(systemImage: "bell", label: "Notifications", badge: (viewModel?.unreadCount ?? 0) > 0) {
+                    showNotifications = true
+                }
             }
 
             if let viewModel {
@@ -54,9 +58,15 @@ struct HomeView: View {
         .ecoScreenBackground()
         .task {
             guard viewModel == nil, let user = appSession.currentUser else { return }
-            let model = HomeViewModel(user: user, feed: feedService, cleanUps: cleanUpRepository, activities: activityRepository)
+            let model = HomeViewModel(user: user, feed: feedService, cleanUps: cleanUpRepository, activities: activityRepository, inbox: inboxService)
             viewModel = model
             await model.load()
+        }
+        .fullScreenCover(isPresented: $showNotifications, onDismiss: {
+            Task { await viewModel?.refreshUnread() }
+        }) {
+            NotificationsView(onClose: { showNotifications = false })
+                .ecoTheme()
         }
         .sheet(item: $openedCleanUp) { cleanUp in
             NavigationStack { CleanUpDetailView(cleanUp: cleanUp, selectedTab: $selectedTab) }

@@ -8,6 +8,7 @@ final class HomeViewModel {
     private(set) var nearbyCleanUps: [CleanUp] = []
     private(set) var weeklyStreak = 0
     private(set) var isLoading = false
+    private(set) var unreadCount = 0
 
     let user: User
     private let feed: FeedService
@@ -16,15 +17,18 @@ final class HomeViewModel {
     private let now: () -> Date
     private let calendar: Calendar
     private let reference: Coordinate
+    private let inbox: InboxService
 
     init(user: User, feed: FeedService, cleanUps: CleanUpRepository, activities: ActivityRepository,
          reference: Coordinate = Fixtures.homeCoordinate,
+         inbox: InboxService = FakeInboxService(),
          now: @escaping () -> Date = { .now }, calendar: Calendar = .current) {
         self.user = user
         self.feed = feed
         self.cleanUps = cleanUps
         self.activities = activities
         self.reference = reference
+        self.inbox = inbox
         self.now = now
         self.calendar = calendar
     }
@@ -33,12 +37,17 @@ final class HomeViewModel {
         isLoading = true
         defer { isLoading = false }
         posts = (try? await feed.recentPosts()) ?? []
+        unreadCount = await inbox.unreadCount()
         let all = (try? await cleanUps.all()) ?? []
         nearbyCleanUps = all
             .filter { $0.status != .done }
             .sorted { distance(to: $0) < distance(to: $1) }
         let history = (try? await activities.history(userId: user.id)) ?? []
         weeklyStreak = Self.weeklyStreak(activityDates: history.map(\.startedAt), now: now(), calendar: calendar)
+    }
+
+    func refreshUnread() async {
+        unreadCount = await inbox.unreadCount()
     }
 
     func toggleKudos(_ post: FeedPost) async {

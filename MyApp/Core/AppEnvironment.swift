@@ -7,6 +7,12 @@ import Foundation
 enum AppEnvironment {
     static var useFakeData = true
 
+    /// The real camera when the device has one, otherwise the demo-photo fake (simulator).
+    static func makeCamera() -> CameraProviding {
+        let live = LiveCameraProvider()
+        return live.isAvailable ? live : FakeCameraProvider()
+    }
+
     static func makeActivityViewModel(
         context: ActivityContext,
         userId: UUID,

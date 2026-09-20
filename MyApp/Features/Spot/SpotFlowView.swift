@@ -14,6 +14,7 @@ struct SpotFlowView: View {
     @Environment(\.cleanUpRepository) private var cleanUpRepository
     @Environment(\.notificationService) private var notificationService
     @Environment(\.appSession) private var appSession
+    @Environment(\.dismiss) private var dismiss
     @State private var locationProvider = LocationFixProvider()
 
     @State private var step: Step = .capture
@@ -28,7 +29,7 @@ struct SpotFlowView: View {
         Group {
             switch step {
             case .capture:
-                SpotCaptureView(onCaptured: handleCapture)
+                CameraScannerView(onCaptured: handleCapture, onClose: { dismiss() })
             case .analyzing:
                 SpotAnalyzingView()
             case .result:
@@ -54,6 +55,7 @@ struct SpotFlowView: View {
         }
         .navigationTitle("Spot")
         .navigationBarTitleDisplayMode(.inline)
+        .toolbar(step == .capture ? .hidden : .visible, for: .navigationBar)
         .toolbar {
             if step != .capture {
                 ToolbarItem(placement: .cancellationAction) {

@@ -286,7 +286,8 @@ final class ActivityViewModel: Identifiable {
             afterPhotoURL: nil,
             reelURL: nil,
             title: trimmed.isEmpty ? Self.defaultTitle(at: startedAt ?? now()) : trimmed,
-            kcalIsEstimated: kcalIsEstimated
+            kcalIsEstimated: kcalIsEstimated,
+            beforePhotoURL: context.cleanUp?.beforePhotoURL
         )
     }
 

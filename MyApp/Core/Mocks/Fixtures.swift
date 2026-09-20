@@ -160,7 +160,7 @@ enum Fixtures {
             }
         }
         func activity(_ title: String, daysAgo: Double, km: Double, minutes: Double, bags: Int, kg: Double,
-                      steps: Int, after: String?) -> Activity {
+                      steps: Int, after: String?, before: String? = nil) -> Activity {
             let start = now.addingTimeInterval(-daysAgo * 86_400)
             return Activity(
                 id: UUID(), userId: user.id, cleanUpId: nil,
@@ -170,18 +170,44 @@ enum Fixtures {
                 avgHR: 118, steps: steps,
                 impactLog: ImpactLog(bags: bags, kg: kg, itemCounts: ["plastic": bags * 6, "glass": bags]),
                 afterPhotoURL: after.flatMap(DemoPhotos.url), reelURL: nil,
-                title: title, kcalIsEstimated: false, healthWorkoutId: UUID()
+                title: title, kcalIsEstimated: false, healthWorkoutId: UUID(),
+                beforePhotoURL: before.flatMap(DemoPhotos.url)
             )
         }
         return [
-            activity("Morning Clean-Up", daysAgo: 1.2, km: 3.4, minutes: 42, bags: 3, kg: 6.5, steps: 4600, after: "after_park_bridge"),
-            activity("Riverside sweep", daysAgo: 4.1, km: 2.1, minutes: 31, bags: 2, kg: 4, steps: 3100, after: "after_river"),
-            activity("Evening plog", daysAgo: 8.3, km: 5.2, minutes: 58, bags: 4, kg: 9, steps: 7200, after: "after_path"),
-            activity("Beach path clean-up", daysAgo: 11.0, km: 2.8, minutes: 40, bags: 5, kg: 11, steps: 3900, after: "after_beach"),
-            activity("Trail stewards walk", daysAgo: 16.5, km: 4.3, minutes: 55, bags: 3, kg: 5, steps: 6000, after: "after_trail"),
+            activity("Morning Clean-Up", daysAgo: 1.2, km: 3.4, minutes: 42, bags: 3, kg: 6.5, steps: 4600, after: "after_park_bridge", before: "before_creek"),
+            activity("Riverside sweep", daysAgo: 4.1, km: 2.1, minutes: 31, bags: 2, kg: 4, steps: 3100, after: "after_river", before: "before_river"),
+            activity("Evening plog", daysAgo: 8.3, km: 5.2, minutes: 58, bags: 4, kg: 9, steps: 7200, after: "after_path", before: "before_street"),
+            activity("Beach path clean-up", daysAgo: 11.0, km: 2.8, minutes: 40, bags: 5, kg: 11, steps: 3900, after: "after_beach", before: "before_beach"),
+            activity("Trail stewards walk", daysAgo: 16.5, km: 4.3, minutes: 55, bags: 3, kg: 5, steps: 6000, after: "after_trail", before: "before_wetland"),
             activity("Lunch-break litter pick", daysAgo: 20.2, km: 1.6, minutes: 24, bags: 2, kg: 3, steps: 2300, after: nil),
-            activity("Wetland creek litter", daysAgo: 27.0, km: 3.0, minutes: 47, bags: 4, kg: 8.5, steps: 4300, after: "after_trail"),
-            activity("First cleanup", daysAgo: 33.4, km: 1.9, minutes: 29, bags: 2, kg: 3.5, steps: 2700, after: "after_park_bridge"),
+            activity("Wetland creek litter", daysAgo: 27.0, km: 3.0, minutes: 47, bags: 4, kg: 8.5, steps: 4300, after: "after_trail", before: "before_wetland"),
+            activity("First cleanup", daysAgo: 33.4, km: 1.9, minutes: 29, bags: 2, kg: 3.5, steps: 2700, after: "after_park_bridge", before: "before_creek"),
+        ]
+    }
+
+    /// Inbox: likes on my activities, comments, and community reactions, spread over the last week.
+    static func seedNotifications() -> [AppNotification] {
+        let now = Date()
+        func item(_ kind: NotificationKind, _ actor: User, others: Int = 0, _ subject: String, comment: String? = nil,
+                  photo: String? = nil, ago: TimeInterval, read: Bool = false) -> AppNotification {
+            AppNotification(kind: kind, actorName: actor.name, otherActorsCount: others, subject: subject,
+                            commentText: comment, photoURL: photo.flatMap(DemoPhotos.url),
+                            createdAt: now.addingTimeInterval(-ago), isRead: read)
+        }
+        return [
+            item(.activityLike, hostC, "Morning Clean-Up", photo: "after_park_bridge", ago: 900),
+            item(.comment, hostB, "Morning Clean-Up", comment: "Great work! That park looks so much better already.", photo: "after_park_bridge", ago: 2_400),
+            item(.communityLike, hostA, others: 4, "Beach path clean-up", photo: "before_beach", ago: 5_400),
+            item(.activityLike, hostD, "Riverside sweep", photo: "after_river", ago: 14_000),
+            item(.comment, hostF, "Riverside sweep", comment: "Count me in for the next one 🙌", photo: "after_river", ago: 30_000),
+            item(.communityLike, hostE, others: 11, "Street corner rescue", photo: "before_street", ago: 60_000, read: true),
+            item(.activityLike, hostA, "Evening plog", photo: "after_path", ago: 100_000, read: true),
+            item(.comment, hostC, "Evening plog", comment: "5 km with 4 bags, that's a serious plog!", photo: "after_path", ago: 130_000, read: true),
+            item(.communityLike, hostB, others: 7, "Wetland creek litter", photo: "before_wetland", ago: 220_000, read: true),
+            item(.activityLike, hostF, "Beach path clean-up", photo: "after_beach", ago: 300_000, read: true),
+            item(.comment, hostD, "Trail stewards walk", comment: "Love this trail, thanks for cleaning it up!", photo: "after_trail", ago: 420_000, read: true),
+            item(.activityLike, hostE, "First cleanup", photo: "after_park_bridge", ago: 700_000, read: true),
         ]
     }
 

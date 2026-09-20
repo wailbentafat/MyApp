@@ -19,8 +19,10 @@ struct ActivityFlowView: View {
                 ImpactLogView(viewModel: viewModel, onDiscard: onClose)
                     .transition(.move(edge: .trailing))
             case .summary:
-                ActivitySummaryView(viewModel: viewModel, onDone: onClose)
-                    .transition(.move(edge: .trailing))
+                if let activity = viewModel.savedActivity {
+                    ActivityShareLauncher(activity: activity, showsDone: true, onClose: onClose)
+                        .transition(.move(edge: .trailing))
+                }
             }
         }
         .animation(.easeInOut(duration: 0.3), value: viewModel.screen)

@@ -48,6 +48,10 @@ enum EcoIcon {
         "smoke.fill": "cigarette", "newspaper.fill": "file-text",
         "exclamationmark.triangle.fill": "triangle-alert", "questionmark.circle.fill": "circle-help",
         "wrench.and.screwdriver": "wrench",
+        // sharing, notifications, camera
+        "instagram.logo": "instagram", "square.and.arrow.down": "download", "doc.on.doc": "copy",
+        "ellipsis": "ellipsis", "heart": "heart", "bubble.left.fill": "message-circle",
+        "bolt.fill": "zap", "bolt.slash.fill": "zap-off", "chevron.right": "chevron-right",
     ]
 }
 

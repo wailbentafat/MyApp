@@ -1,11 +1,31 @@
 import SwiftUI
 
+/// You tab. Owns only the view model; state and logic live in `ProfileViewModel`.
 struct ProfileView: View {
     @Environment(\.appSession) private var appSession
     @Environment(\.activityRepository) private var activityRepository
+    @State private var viewModel: ProfileViewModel?
 
-    @State private var history: [Activity] = []
-    private let badges = Fixtures.seedBadges()
+    var body: some View {
+        ZStack {
+            Eco.background.ignoresSafeArea()
+            if let viewModel {
+                ProfileContent(viewModel: viewModel)
+            }
+        }
+        .navigationTitle("Me")
+        .task {
+            guard viewModel == nil else { return }
+            let model = ProfileViewModel(user: appSession.currentUser, activities: activityRepository)
+            viewModel = model
+            await model.load()
+        }
+    }
+}
+
+private struct ProfileContent: View {
+    @Bindable var viewModel: ProfileViewModel
+    @Environment(\.appSession) private var appSession
 
     var body: some View {
         ScrollView {
@@ -13,14 +33,14 @@ struct ProfileView: View {
                 header
 
                 HStack(spacing: Eco.Space.m) {
-                    EcoStatTile(value: "\(appSession.currentUser?.totals.cleanUpsJoined ?? 0)", label: "Clean-Ups", systemImage: "checkmark.seal.fill")
-                    EcoStatTile(value: "\(appSession.currentUser?.totals.bagsCollected ?? 0)", label: "Bags", systemImage: "bag.fill")
-                    EcoStatTile(value: String(format: "%.0f km", appSession.currentUser?.totals.distanceKm ?? 0), label: "Distance", systemImage: "figure.walk")
+                    EcoStatTile(value: viewModel.cleanUpsText, label: "Clean-Ups", systemImage: "checkmark.seal.fill")
+                    EcoStatTile(value: viewModel.bagsText, label: "Bags", systemImage: "bag.fill")
+                    EcoStatTile(value: viewModel.distanceText, label: "Distance", systemImage: "figure.walk")
                 }
 
                 VStack(alignment: .leading, spacing: Eco.Space.m) {
                     EcoSectionHeader(title: "Impact equivalents")
-                    Text("≈ \((appSession.currentUser?.totals.bagsCollected ?? 0) * 45) plastic bottles kept out of waterways")
+                    Text(viewModel.bottlesText)
                         .font(.ecoBodyMedium)
                         .foregroundStyle(Eco.textBody)
                         .ecoCard()
@@ -30,74 +50,28 @@ struct ProfileView: View {
                     EcoSectionHeader(title: "Badges")
                     ScrollView(.horizontal, showsIndicators: false) {
                         HStack(spacing: Eco.Space.m) {
-                            ForEach(badges) { badge in
-                                BadgeTile(badge: badge)
-                            }
+                            ForEach(viewModel.badges) { BadgeTile(badge: $0) }
                         }
                     }
                 }
 
-                VStack(alignment: .leading, spacing: Eco.Space.m) {
-                    EcoSectionHeader(title: "History")
-                    if history.isEmpty {
-                        Text("No finished activities yet.")
-                            .font(.ecoBodySmall)
-                            .foregroundStyle(Eco.textHint)
-                    } else {
-                        VStack(spacing: Eco.Space.s) {
-                            ForEach(history) { activity in
-                                HistoryRow(activity: activity)
-                            }
-                        }
-                        .ecoCard()
-                    }
-                }
+                activities
 
-                VStack(alignment: .leading, spacing: Eco.Space.m) {
-                    EcoSectionHeader(title: "Settings")
-                    VStack(spacing: 0) {
-                        Toggle(
-                            "Nearby Clean-Up notifications",
-                            isOn: Binding(
-                                get: { appSession.notificationsEnabled },
-                                set: { appSession.notificationsEnabled = $0 }
-                            )
-                        )
-                            .font(.ecoBodyMedium)
-                            .foregroundStyle(Eco.textBody)
-                            .tint(Eco.primary)
-                            .padding(.vertical, Eco.Space.s)
-
-                        Divider().background(Eco.border)
-
-                        Button(role: .destructive) {
-                            Task { await appSession.signOut() }
-                        } label: {
-                            HStack {
-                                Text("Sign out")
-                                Spacer()
-                                EcoSymbol("rectangle.portrait.and.arrow.right")
-                            }
-                        }
-                        .foregroundStyle(Eco.error)
-                        .font(.ecoBodyMedium)
-                        .padding(.vertical, Eco.Space.s)
-                    }
-                    .ecoCard()
-                }
+                settings
             }
             .padding(Eco.Space.l)
         }
-        .ecoScreenBackground()
-        .navigationTitle("Me")
-        .task { await loadHistory() }
+        .fullScreenCover(item: $viewModel.selectedActivity) { activity in
+            ActivityShareLauncher(activity: activity, onClose: { viewModel.closePreview() })
+                .ecoTheme()
+        }
     }
 
     private var header: some View {
         HStack(spacing: Eco.Space.m) {
-            EcoAvatar(name: appSession.currentUser?.name ?? "hɛal", size: 56)
+            EcoAvatar(name: viewModel.displayName, size: 56)
             VStack(alignment: .leading, spacing: 2) {
-                Text(appSession.currentUser?.name ?? "—")
+                Text(viewModel.displayName)
                     .font(.ecoHeadlineSmall)
                     .foregroundStyle(Eco.textPrimary)
                 Text("Healer")
@@ -108,9 +82,91 @@ struct ProfileView: View {
         }
     }
 
-    private func loadHistory() async {
-        guard let userId = appSession.currentUser?.id else { return }
-        history = (try? await activityRepository.history(userId: userId)) ?? []
+    private var activities: some View {
+        VStack(alignment: .leading, spacing: Eco.Space.m) {
+            EcoSectionHeader(title: "Activities")
+            VStack(spacing: Eco.Space.s) {
+                ForEach(viewModel.rows) { row in
+                    Button { viewModel.open(row) } label: { ActivityRow(row: row) }
+                        .buttonStyle(.plain)
+                }
+            }
+        }
+    }
+
+    private var settings: some View {
+        VStack(alignment: .leading, spacing: Eco.Space.m) {
+            EcoSectionHeader(title: "Settings")
+            VStack(spacing: 0) {
+                Toggle(
+                    "Nearby Clean-Up notifications",
+                    isOn: Binding(
+                        get: { appSession.notificationsEnabled },
+                        set: { appSession.notificationsEnabled = $0 }
+                    )
+                )
+                .font(.ecoBodyMedium)
+                .foregroundStyle(Eco.textBody)
+                .tint(Eco.primary)
+                .padding(.vertical, Eco.Space.s)
+
+                Divider().overlay(Eco.border)
+
+                Button(role: .destructive) {
+                    Task { await appSession.signOut() }
+                } label: {
+                    HStack {
+                        Text("Sign out")
+                        Spacer()
+                        EcoSymbol("rectangle.portrait.and.arrow.right")
+                    }
+                }
+                .foregroundStyle(Eco.error)
+                .font(.ecoBodyMedium)
+                .padding(.vertical, Eco.Space.s)
+            }
+            .ecoCard()
+        }
+    }
+}
+
+/// One activity: thumbnail, title, date, stats, and a share chevron. Tapping opens the share preview.
+private struct ActivityRow: View {
+    let row: ProfileViewModel.Row
+
+    var body: some View {
+        HStack(spacing: Eco.Space.m) {
+            Group {
+                if let image = FakePhotoStore.shared.loadImage(row.photoURL) {
+                    Image(uiImage: image).resizable().scaledToFill()
+                } else {
+                    Eco.surfaceRaised
+                }
+            }
+            .frame(width: 64, height: 64)
+            .clipShape(RoundedRectangle(cornerRadius: 12))
+
+            VStack(alignment: .leading, spacing: 3) {
+                Text(row.title)
+                    .font(.ecoTitleMedium)
+                    .foregroundStyle(Eco.textPrimary)
+                    .lineLimit(1)
+                Text(row.dateText)
+                    .font(.ecoBodySmall)
+                    .foregroundStyle(Eco.textSecondary)
+                Text(row.statsText)
+                    .font(.ecoBodySmall)
+                    .foregroundStyle(Eco.textBody)
+                    .lineLimit(1)
+            }
+            Spacer(minLength: 0)
+            EcoSymbol("chevron.right", size: 16)
+                .foregroundStyle(Eco.textSecondary)
+        }
+        .padding(Eco.Space.m)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(Eco.surface, in: RoundedRectangle(cornerRadius: Eco.Radius.card))
+        .contentShape(Rectangle())
     }
 }
 
@@ -119,8 +175,7 @@ private struct BadgeTile: View {
 
     var body: some View {
         VStack(spacing: Eco.Space.s) {
-            EcoSymbol(badge.systemImage)
-                .font(.title2)
+            EcoSymbol(badge.systemImage, size: 24)
                 .foregroundStyle(badge.isEarned ? Eco.onPrimary : Eco.textHint)
                 .frame(width: 56, height: 56)
                 .background(badge.isEarned ? Eco.primary : Eco.surfaceRaised, in: Circle())
@@ -130,27 +185,6 @@ private struct BadgeTile: View {
                 .multilineTextAlignment(.center)
                 .frame(width: 76)
         }
-    }
-}
-
-private struct HistoryRow: View {
-    let activity: Activity
-
-    var body: some View {
-        HStack {
-            EcoSymbol("figure.run")
-                .foregroundStyle(Eco.primary)
-            VStack(alignment: .leading, spacing: 2) {
-                Text(activity.startedAt.formatted(date: .abbreviated, time: .omitted))
-                    .font(.ecoBodyMedium)
-                    .foregroundStyle(Eco.textBody)
-                Text(String(format: "%.1f km · %.0f kcal · %d bags", activity.distance / 1000, activity.kcal, activity.impactLog.bags))
-                    .font(.ecoBodySmall)
-                    .foregroundStyle(Eco.textSecondary)
-            }
-            Spacer()
-        }
-        .padding(.vertical, Eco.Space.xs)
     }
 }
 

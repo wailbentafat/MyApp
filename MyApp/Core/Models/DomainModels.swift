@@ -263,6 +263,8 @@ struct Activity: Identifiable, Codable, Hashable, Sendable {
     /// `true` while `kcal` comes from the MET formula, `false` once HealthKit energy replaced it.
     var kcalIsEstimated: Bool = true
     var healthWorkoutId: UUID?
+    /// The Clean-Up's Spot photo (the story's "Before"). Nil for free activities.
+    var beforePhotoURL: URL?
 }
 
 // MARK: - Community feed

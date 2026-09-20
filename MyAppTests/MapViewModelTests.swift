@@ -10,8 +10,8 @@ private final class StubLocationFix: LocationFixing {
 
 @MainActor
 final class MapViewModelTests: XCTestCase {
-    private func makeViewModel(location: StubLocationFix = StubLocationFix()) -> MapViewModel {
-        MapViewModel(repository: FakeBackendService(), location: location)
+    private func makeViewModel(location: StubLocationFix? = nil) -> MapViewModel {
+        MapViewModel(repository: FakeBackendService(), location: location ?? StubLocationFix())
     }
 
     func testLoadShowsEveryCleanUpAndFilterNarrowsThem() async {
@@ -68,8 +68,10 @@ final class CleanUpDetailViewModelTests: XCTestCase {
     func testRSVPTogglesAttendanceAndTitle() async throws {
         let backend = FakeBackendService()
         let user = Fixtures.hostF
-        let cleanUp = try XCTUnwrap(Fixtures.seedCleanUps().first { !$0.attendeeIds.contains(user.id) && !$0.isFull && $0.status != .done })
-        let stored = try await backend.cleanUp(id: cleanUp.id) ?? cleanUp
+        let candidates = try await backend.all()
+        let stored = try XCTUnwrap(candidates.first {
+            !$0.attendeeIds.contains(user.id) && !$0.isFull && $0.status != .done
+        })
         let vm = makeViewModel(cleanUp: stored, user: user, backend: backend)
         XCTAssertFalse(vm.isAttending)
         XCTAssertEqual(vm.rsvpTitle, "RSVP — I'm in")
