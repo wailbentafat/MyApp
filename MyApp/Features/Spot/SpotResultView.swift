@@ -7,6 +7,9 @@ struct SpotResultView: View {
     var onRetry: () -> Void
     var onContinue: () -> Void
 
+    @Environment(\.soundPlayer) private var soundPlayer
+    @State private var viewModel: SpotResultViewModel?
+
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: Eco.Space.xl) {
@@ -102,6 +105,12 @@ struct SpotResultView: View {
             .padding(Eco.Space.l)
         }
         .ecoScreenBackground()
+        .onAppear {
+            let model = viewModel ?? SpotResultViewModel(result: result, hasError: errorMessage != nil, sound: soundPlayer)
+            viewModel = model
+            model.onAppear()
+        }
+        .onDisappear { viewModel?.onDisappear() }
     }
 
     private func toggle(_ type: WasteType) {
