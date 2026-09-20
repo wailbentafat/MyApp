@@ -32,6 +32,12 @@ final class NotificationsViewModel {
         var id: String { title }
     }
 
+    /// Where a notification leads when tapped.
+    enum NotificationDestination: Hashable {
+        case post(activityId: UUID, highlightCommentID: UUID?)
+        case cleanUp(id: UUID)
+    }
+
     var filter: Filter = .all
     private(set) var all: [AppNotification] = []
     private(set) var isLoading = true
@@ -113,10 +119,29 @@ final class NotificationsViewModel {
 
     // MARK: Actions
 
-    func open(_ item: AppNotification) async {
-        guard !item.isRead else { return }
-        await inbox.markRead(id: item.id)
-        await load()
+    /// Marks the notification read and says where it leads.
+    @discardableResult
+    func open(_ item: AppNotification) async -> NotificationDestination {
+        if !item.isRead {
+            await inbox.markRead(id: item.id)
+            await load()
+        }
+        return destination(for: item)
+    }
+
+    func destination(for item: AppNotification) -> NotificationDestination {
+        switch item.target {
+        case .activity(let id): .post(activityId: id, highlightCommentID: item.commentID)
+        case .cleanUp(let id): .cleanUp(id: id)
+        }
+    }
+
+    /// Live updates (new reactions arriving while the screen is open).
+    func subscribe() async {
+        for await items in inbox.changes() {
+            all = items
+            isLoading = false
+        }
     }
 
     func markAllRead() async {

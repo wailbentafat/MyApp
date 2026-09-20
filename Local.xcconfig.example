@@ -2,3 +2,5 @@
 // HealthKit, Live Activities and push need a real signing team on a physical device.
 DEVELOPMENT_TEAM = YOURTEAMID
 CODE_SIGN_STYLE = Automatic
+// Instagram Stories sharing needs the Meta App ID from developers.facebook.com
+INSTAGRAM_APP_ID = 000000000000000

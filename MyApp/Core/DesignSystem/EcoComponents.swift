@@ -273,6 +273,44 @@ struct EcoSectionHeader: View {
     .ecoTheme()
 }
 
+// MARK: - Photo (layout-safe)
+
+/// A photo that always fills the width it is given and never makes its parent wider.
+/// `scaledToFill()` reports the image's own (larger) size to layout, which used to push cards past the screen edge;
+/// putting the image in an `overlay` of a clear, fixed-height view keeps layout independent of the image.
+struct EcoPhoto<Placeholder: View>: View {
+    let image: UIImage?
+    var height: CGFloat = 150
+    var cornerRadius: CGFloat = Eco.Radius.field
+    @ViewBuilder var placeholder: Placeholder
+
+    var body: some View {
+        Color.clear
+            .frame(height: height)
+            .frame(maxWidth: .infinity)
+            .overlay {
+                if let image {
+                    Image(uiImage: image).resizable().scaledToFill()
+                } else {
+                    placeholder
+                }
+            }
+            .clipShape(RoundedRectangle(cornerRadius: cornerRadius))
+    }
+}
+
+extension EcoPhoto where Placeholder == AnyView {
+    /// Default placeholder: raised surface with a photo icon (never an empty box).
+    init(image: UIImage?, height: CGFloat = 150, cornerRadius: CGFloat = Eco.Radius.field) {
+        self.image = image
+        self.height = height
+        self.cornerRadius = cornerRadius
+        self.placeholder = AnyView(
+            Eco.surfaceRaised.overlay(EcoSymbol("photo", size: 28).foregroundStyle(Eco.textHint))
+        )
+    }
+}
+
 // MARK: - Avatar (initials, no empty placeholder images)
 
 struct EcoAvatar: View {
@@ -344,5 +382,46 @@ struct EcoCalendarStrip: View {
             }
             .padding(.horizontal, Eco.Space.l)
         }
+    }
+}
+
+// MARK: - Input bar (comment composer)
+
+/// Glass text field with a white circular send button, for `safeAreaInset(edge: .bottom)`.
+struct EcoInputBar: View {
+    @Binding var text: String
+    var placeholder: String
+    var canSend: Bool
+    var isSending = false
+    var onSend: () -> Void
+
+    var body: some View {
+        HStack(alignment: .bottom, spacing: Eco.Space.s) {
+            TextField(placeholder, text: $text, axis: .vertical)
+                .lineLimit(1...4)
+                .font(.ecoBodyMedium)
+                .foregroundStyle(Eco.textPrimary)
+                .padding(.horizontal, Eco.Space.l)
+                .padding(.vertical, Eco.Space.m)
+                .glassEffect(.regular, in: .rect(cornerRadius: 22))
+
+            Button(action: onSend) {
+                Group {
+                    if isSending {
+                        ProgressView().tint(Eco.onButton)
+                    } else {
+                        EcoSymbol("paperplane.fill", size: 20)
+                    }
+                }
+                .foregroundStyle(Eco.onButton)
+                .frame(width: 46, height: 46)
+                .background(Eco.buttonFill.opacity(canSend ? 1 : 0.4), in: Circle())
+            }
+            .buttonStyle(.plain)
+            .disabled(!canSend)
+            .accessibilityLabel("Send comment")
+        }
+        .padding(.horizontal, Eco.Space.l)
+        .padding(.vertical, Eco.Space.s)
     }
 }

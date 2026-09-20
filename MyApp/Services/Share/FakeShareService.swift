@@ -10,7 +10,10 @@ import UIKit
 @MainActor
 final class FakeShareService: ShareService {
     func shareToInstagramStory(image: UIImage?, videoURL: URL?, caption: String) async -> ShareOutcome {
-        if let url = URL(string: "instagram-stories://share"), UIApplication.shared.canOpenURL(url) {
+        // Instagram only accepts Story shares that carry a registered Meta App ID (`source_application`).
+        if let appID = AppInfo.instagramAppID,
+           let url = URL(string: "instagram-stories://share?source_application=\(appID)"),
+           UIApplication.shared.canOpenURL(url) {
             let pasteboardItems: [String: Any] = {
                 if let videoURL, let data = try? Data(contentsOf: videoURL) {
                     return ["com.instagram.sharedSticker.backgroundVideo": data]

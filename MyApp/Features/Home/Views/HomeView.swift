@@ -16,6 +16,7 @@ struct HomeView: View {
     @State private var viewModel: HomeViewModel?
     @State private var openedCleanUp: CleanUp?
     @State private var showNotifications = false
+    @State private var openedPostId: UUID?
 
     var body: some View {
         VStack(spacing: 0) {
@@ -43,7 +44,8 @@ struct HomeView: View {
                             ForEach(viewModel.posts) { post in
                                 ActivityPostCard(post: post,
                                                  onKudos: { await viewModel.toggleKudos(post) },
-                                                 onShare: { await share(post) })
+                                                 onShare: { await share(post) },
+                                                 onOpen: { openedPostId = post.activityId })
                             }
                         }
                     }
@@ -61,6 +63,18 @@ struct HomeView: View {
             let model = HomeViewModel(user: user, feed: feedService, cleanUps: cleanUpRepository, activities: activityRepository, inbox: inboxService)
             viewModel = model
             await model.load()
+            await model.subscribe()
+        }
+        .fullScreenCover(item: $openedPostId) { activityId in
+            NavigationStack {
+                PostDetailView(activityId: activityId)
+                    .toolbar {
+                        ToolbarItem(placement: .topBarLeading) {
+                            Button("Close") { openedPostId = nil }
+                        }
+                    }
+            }
+            .ecoTheme()
         }
         .fullScreenCover(isPresented: $showNotifications, onDismiss: {
             Task { await viewModel?.refreshUnread() }

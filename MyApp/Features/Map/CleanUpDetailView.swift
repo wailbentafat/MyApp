@@ -108,19 +108,7 @@ private struct DetailContent: View {
     }
 
     private var photo: some View {
-        Group {
-            if let image = FakePhotoStore.shared.loadImage(cleanUp.beforePhotoURL) {
-                Image(uiImage: image)
-                    .resizable()
-                    .scaledToFill()
-            } else {
-                Eco.surfaceRaised
-                    .overlay(EcoSymbol("photo.fill", size: 40).foregroundStyle(Eco.textHint))
-            }
-        }
-        .frame(height: 200)
-        .frame(maxWidth: .infinity)
-        .clipShape(RoundedRectangle(cornerRadius: Eco.Radius.card))
+        EcoPhoto(image: FakePhotoStore.shared.loadImage(cleanUp.beforePhotoURL), height: 200, cornerRadius: Eco.Radius.card)
     }
 
     private var gearSection: some View {

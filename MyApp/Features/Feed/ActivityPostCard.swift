@@ -5,20 +5,26 @@ struct ActivityPostCard: View {
     let post: FeedPost
     var onKudos: () async -> Void
     var onShare: () async -> Void
+    /// Tapping the author, title or stats opens the post screen.
+    var onOpen: () -> Void = {}
 
     var body: some View {
         VStack(alignment: .leading, spacing: Eco.Space.m) {
-            header
+            VStack(alignment: .leading, spacing: Eco.Space.m) {
+                header
 
-            Text(post.cleanUpTitle)
-                .font(.ecoHeadlineMedium)
-                .foregroundStyle(Eco.textPrimary)
+                Text(post.cleanUpTitle)
+                    .font(.ecoHeadlineMedium)
+                    .foregroundStyle(Eco.textPrimary)
 
-            EcoStatRow(stats: [
-                EcoStat(label: "Distance", value: String(format: "%.1f km", post.distanceKm)),
-                EcoStat(label: "Bags", value: "\(post.bags)"),
-                EcoStat(label: "Energy", value: "\(Int(post.kcal)) kcal"),
-            ])
+                EcoStatRow(stats: [
+                    EcoStat(label: "Distance", value: String(format: "%.1f km", post.distanceKm)),
+                    EcoStat(label: "Bags", value: "\(post.bags)"),
+                    EcoStat(label: "Energy", value: "\(Int(post.kcal)) kcal"),
+                ])
+            }
+            .contentShape(Rectangle())
+            .onTapGesture(perform: onOpen)
 
             EcoBanner(
                 systemImage: "leaf.circle.fill",
@@ -72,23 +78,15 @@ struct ActivityPostCard: View {
     }
 
     private func photoTile(url: URL?, label: String) -> some View {
-        ZStack(alignment: .bottomLeading) {
-            if let image = FakePhotoStore.shared.loadImage(url) {
-                Image(uiImage: image).resizable().scaledToFill()
-            } else {
-                Eco.surfaceRaised
-                EcoSymbol("photo", size: 28).foregroundStyle(Eco.textHint).frame(maxWidth: .infinity, maxHeight: .infinity)
+        EcoPhoto(image: FakePhotoStore.shared.loadImage(url), height: 150)
+            .overlay(alignment: .bottomLeading) {
+                Text(label)
+                    .font(.ecoLabelSmall)
+                    .foregroundStyle(.white)
+                    .padding(.horizontal, Eco.Space.s)
+                    .padding(.vertical, 3)
+                    .glassEffect(.regular, in: .capsule)
+                    .padding(6)
             }
-            Text(label)
-                .font(.ecoLabelSmall)
-                .foregroundStyle(.white)
-                .padding(.horizontal, Eco.Space.s)
-                .padding(.vertical, 3)
-                .glassEffect(.regular, in: .capsule)
-                .padding(6)
-        }
-        .frame(height: 150)
-        .frame(maxWidth: .infinity)
-        .clipShape(RoundedRectangle(cornerRadius: Eco.Radius.field))
     }
 }

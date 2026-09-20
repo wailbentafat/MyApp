@@ -31,6 +31,12 @@ protocol ActivityRepository: Sendable {
     func history(userId: UUID) async throws -> [Activity]
     @discardableResult
     func upload(_ activity: Activity) async throws -> Activity
+    /// Live list of one user's activities (newest first); emits on every change. Default: never emits.
+    func changes(userId: UUID) -> AsyncStream<[Activity]>
+}
+
+extension ActivityRepository {
+    func changes(userId: UUID) -> AsyncStream<[Activity]> { AsyncStream { $0.finish() } }
 }
 
 // MARK: - Community feed
@@ -41,6 +47,12 @@ protocol FeedService: Sendable {
     func toggleKudos(postId: UUID, userId: UUID) async throws -> FeedPost
     /// Appends a finished Activity as a new feed post.
     func publish(activity: Activity, cleanUp: CleanUp, author: User) async
+    /// Live feed; emits on every change (kudos, new posts). Default: never emits.
+    func changes() -> AsyncStream<[FeedPost]>
+}
+
+extension FeedService {
+    func changes() -> AsyncStream<[FeedPost]> { AsyncStream { $0.finish() } }
 }
 
 // MARK: - AI scanner

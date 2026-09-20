@@ -9,9 +9,19 @@ enum NotificationKind: String, Codable, CaseIterable, Sendable {
     case communityLike
 }
 
-struct AppNotification: Identifiable, Hashable, Sendable {
+/// What a notification opens.
+enum NotificationTarget: Codable, Hashable, Sendable {
+    /// An activity / post (mine, or a community feed post's activity).
+    case activity(UUID)
+    case cleanUp(UUID)
+}
+
+struct AppNotification: Identifiable, Codable, Hashable, Sendable {
     var id = UUID()
     var kind: NotificationKind
+    var target: NotificationTarget
+    /// The comment to scroll to and highlight on the post screen.
+    var commentID: UUID?
     var actorName: String
     /// Extra people beyond `actorName` ("Priya and 4 others").
     var otherActorsCount = 0

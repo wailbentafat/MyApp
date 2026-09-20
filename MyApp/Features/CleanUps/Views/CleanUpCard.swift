@@ -6,18 +6,13 @@ struct CleanUpPhoto: View {
     var height: CGFloat = 150
 
     var body: some View {
-        ZStack {
-            if let image = FakePhotoStore.shared.loadImage(cleanUp.beforePhotoURL) {
-                Image(uiImage: image).resizable().scaledToFill()
-            } else {
-                LinearGradient(colors: [Eco.accent, Eco.surface], startPoint: .topLeading, endPoint: .bottomTrailing)
-                EcoSymbol(cleanUp.wasteTypes.first?.systemImage ?? "leaf.fill", size: 44)
-                    .foregroundStyle(Eco.highlight.opacity(0.55))
-            }
+        EcoPhoto(image: FakePhotoStore.shared.loadImage(cleanUp.beforePhotoURL), height: height, cornerRadius: 0) {
+            LinearGradient(colors: [Eco.accent, Eco.surface], startPoint: .topLeading, endPoint: .bottomTrailing)
+                .overlay(
+                    EcoSymbol(cleanUp.wasteTypes.first?.systemImage ?? "leaf.fill", size: 44)
+                        .foregroundStyle(Eco.highlight.opacity(0.55))
+                )
         }
-        .frame(height: height)
-        .frame(maxWidth: .infinity)
-        .clipped()
     }
 }
 

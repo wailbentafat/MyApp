@@ -6,12 +6,26 @@ struct NotificationsView: View {
 
     @Environment(\.inboxService) private var inbox
     @State private var viewModel: NotificationsViewModel?
+    @State private var path: [NotificationsViewModel.NotificationDestination] = []
 
     var body: some View {
         ZStack {
             Eco.background.ignoresSafeArea()
             if let viewModel {
-                Content(viewModel: viewModel, onClose: onClose)
+                NavigationStack(path: $path) {
+                    Content(viewModel: viewModel, onClose: onClose) { destination in
+                        path.append(destination)
+                    }
+                    .toolbar(.hidden, for: .navigationBar)
+                    .navigationDestination(for: NotificationsViewModel.NotificationDestination.self) { destination in
+                        switch destination {
+                        case .post(let activityId, let highlight):
+                            PostDetailView(activityId: activityId, highlightCommentID: highlight)
+                        case .cleanUp(let id):
+                            CleanUpDetailRoute(cleanUpId: id, selectedTab: .constant(.home))
+                        }
+                    }
+                }
             }
         }
         .task {
@@ -19,6 +33,7 @@ struct NotificationsView: View {
             let model = NotificationsViewModel(inbox: inbox)
             viewModel = model
             await model.load()
+            await model.subscribe()
         }
     }
 }
@@ -26,6 +41,7 @@ struct NotificationsView: View {
 private struct Content: View {
     @Bindable var viewModel: NotificationsViewModel
     var onClose: () -> Void
+    var onOpen: (NotificationsViewModel.NotificationDestination) -> Void
 
     var body: some View {
         VStack(spacing: 0) {
@@ -61,7 +77,7 @@ private struct Content: View {
                                 .foregroundStyle(Eco.textPrimary)
                             VStack(spacing: 0) {
                                 ForEach(section.items) { item in
-                                    NotificationRow(viewModel: viewModel, item: item)
+                                    NotificationRow(viewModel: viewModel, item: item, onOpen: onOpen)
                                     if item.id != section.items.last?.id {
                                         Divider().overlay(Eco.border)
                                     }
@@ -80,10 +96,11 @@ private struct Content: View {
 private struct NotificationRow: View {
     let viewModel: NotificationsViewModel
     let item: AppNotification
+    var onOpen: (NotificationsViewModel.NotificationDestination) -> Void
 
     var body: some View {
         Button {
-            Task { await viewModel.open(item) }
+            Task { onOpen(await viewModel.open(item)) }
         } label: {
             HStack(alignment: .top, spacing: Eco.Space.m) {
                 avatar

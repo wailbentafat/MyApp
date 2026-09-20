@@ -14,12 +14,8 @@ struct SpotPublishView: View {
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: Eco.Space.xl) {
-                if let image {
-                    Image(uiImage: image)
-                        .resizable()
-                        .scaledToFill()
-                        .frame(height: 180)
-                        .clipShape(RoundedRectangle(cornerRadius: Eco.Radius.card))
+                if image != nil {
+                    EcoPhoto(image: image, height: 180, cornerRadius: Eco.Radius.card)
                 }
 
                 VStack(alignment: .leading, spacing: Eco.Space.m) {

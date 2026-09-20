@@ -119,23 +119,16 @@ private struct FeedPostCard: View {
     }
 
     private func photoTile(url: URL?, label: String) -> some View {
-        ZStack(alignment: .bottomLeading) {
-            if let image = FakePhotoStore.shared.loadImage(url) {
-                Image(uiImage: image).resizable().scaledToFill()
-            } else {
-                Eco.surfaceRaised
+        EcoPhoto(image: FakePhotoStore.shared.loadImage(url), height: 120)
+            .overlay(alignment: .bottomLeading) {
+                Text(label)
+                    .font(.ecoLabelSmall)
+                    .foregroundStyle(.white)
+                    .padding(.horizontal, Eco.Space.s)
+                    .padding(.vertical, 2)
+                    .background(.black.opacity(0.5), in: Capsule())
+                    .padding(6)
             }
-            Text(label)
-                .font(.ecoLabelSmall)
-                .foregroundStyle(.white)
-                .padding(.horizontal, Eco.Space.s)
-                .padding(.vertical, 2)
-                .background(.black.opacity(0.5), in: Capsule())
-                .padding(6)
-        }
-        .frame(height: 120)
-        .frame(maxWidth: .infinity)
-        .clipShape(RoundedRectangle(cornerRadius: Eco.Radius.field))
     }
 }
 

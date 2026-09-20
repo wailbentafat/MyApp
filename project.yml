@@ -30,6 +30,7 @@ targets:
       properties:
         UILaunchScreen: {}
         CFBundleDisplayName: hɛal
+        InstagramAppID: $(INSTAGRAM_APP_ID)
         UIAppFonts:
           - Inter.ttf
         UIBackgroundModes:

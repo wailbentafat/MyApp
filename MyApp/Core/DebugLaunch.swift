@@ -7,6 +7,8 @@ enum DebugLaunch {
     private static let arguments = ProcessInfo.processInfo.arguments
 
     static var autoSignIn: Bool { arguments.contains("-ecoAutoSignIn") }
+    /// Wipes the persisted demo data before the app starts.
+    static var resetData: Bool { arguments.contains("-ecoResetData") }
 
     static func value(after flag: String) -> String? {
         guard let index = arguments.firstIndex(of: flag), arguments.indices.contains(index + 1) else { return nil }
@@ -14,6 +16,7 @@ enum DebugLaunch {
     }
     #else
     static var autoSignIn: Bool { false }
+    static var resetData: Bool { false }
     static func value(after flag: String) -> String? { nil }
     #endif
 }

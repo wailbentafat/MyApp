@@ -18,17 +18,35 @@ final class ProfileViewModel {
     let badges: [Badge]
 
     let user: User?
+    private(set) var isResetting = false
     private let activities: ActivityRepository
+    private let resetter: DemoDataResetting
 
-    init(user: User?, activities: ActivityRepository, badges: [Badge] = Fixtures.seedBadges()) {
+    init(user: User?, activities: ActivityRepository, resetter: DemoDataResetting = DemoDataResetter(targets: []),
+         badges: [Badge] = Fixtures.seedBadges()) {
         self.user = user
         self.activities = activities
+        self.resetter = resetter
         self.badges = badges
     }
 
     func load() async {
         guard let user else { return }
         history = (try? await activities.history(userId: user.id)) ?? []
+    }
+
+    /// Keeps the list live: a newly finished activity shows up here without reloading.
+    func subscribe() async {
+        guard let user else { return }
+        for await list in activities.changes(userId: user.id) { history = list }
+    }
+
+    /// Puts all fake data back to the seed (Settings ▸ Reset demo data).
+    func resetDemoData() async {
+        isResetting = true
+        defer { isResetting = false }
+        await resetter.resetToSeed()
+        await load()
     }
 
     // MARK: Header & totals

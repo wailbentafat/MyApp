@@ -75,3 +75,16 @@ Two developers: **P1 Activity & Reel** (tracking, HealthKit, Live Activity, ghos
 
 M0 done. Activity flow (record → impact log → summary) works end to end on **fake data** (simulated GPS walk, fake heart rate/steps). Architecture is strict MVVM; switch to live sensors with `AppEnvironment.useFakeData`.
 Next: live HealthKit, persistence/history, ghost camera, Reel, Live Activity wiring.
+
+## Persistence (fake data)
+
+All fake data is saved on the device as JSON files in `Application Support/heal/` (`backend.json`, `inbox.json`), so new
+activities, RSVPs, Eco-Boosts, comments and read notifications survive relaunches. The signed-in user and the
+notification setting live in `UserDefaults`. Seed data has stable IDs (`SeedIDs`), demo dates roll forward
+(`SeedRefresher`), and photo URLs are stored portably (`URLRebaser`).
+
+- Reset: Profile ▸ Settings ▸ **Reset demo data**, or launch with `-ecoResetData` (DEBUG).
+- Changing a persisted model in a way old files can't decode? Bump `PersistenceConfig.schemaVersion` (old files are
+  quarantined as `*.corrupt.json` and reseeded).
+- Services: `FakeBackendService` (clean-ups, activities, feed, social) and `FakeInboxService`; `ReactionSimulator` makes
+  fake people react to what you post (Eco-Boost, comment, community like), which arrive as notifications.

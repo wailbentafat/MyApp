@@ -31,10 +31,13 @@ enum Fixtures {
 
     static var demoUsers: [User] { [hostA, hostB, hostC, hostD, hostE, hostF] }
 
-    private static func jitter(_ coordinate: Coordinate, meters: Double) -> Coordinate {
+    /// Deterministic "random" offset (same seed, same place) so seeded pins never move between launches.
+    private static func jitter(_ coordinate: Coordinate, meters: Double, seed: Int = 0) -> Coordinate {
         let degreesPerMeter = 1.0 / 111_000.0
-        let dLat = Double.random(in: -meters...meters) * degreesPerMeter
-        let dLon = Double.random(in: -meters...meters) * degreesPerMeter
+        let a = Double((seed &* 7919 &+ 13) % 1000) / 1000
+        let b = Double((seed &* 104_729 &+ 71) % 1000) / 1000
+        let dLat = (a * 2 - 1) * meters * degreesPerMeter
+        let dLon = (b * 2 - 1) * meters * degreesPerMeter
         return Coordinate(latitude: coordinate.latitude + dLat, longitude: coordinate.longitude + dLon)
     }
 
@@ -43,7 +46,7 @@ enum Fixtures {
         var items: [GearItem] = []
         for type in wasteTypes {
             for name in type.suggestedGear where seen.insert(name).inserted {
-                items.append(GearItem(name: name, systemImage: type.systemImage, committedCount: Int.random(in: 0...4)))
+                items.append(GearItem(name: name, systemImage: type.systemImage, committedCount: name.unicodeScalars.reduce(0) { $0 &+ Int($1.value) } % 5))
             }
         }
         return items
@@ -83,13 +86,15 @@ enum Fixtures {
     static func seedCleanUps(near coordinate: Coordinate = homeCoordinate) -> [CleanUp] {
         let now = Date()
         let me = User.demo
+        var counter = 0
         func cleanUp(
             _ title: String, photo: String, heading: Double, waste: [WasteType], severity: Severity, bags: Int,
             hazard: HazardLevel = .none, starts: Date?, capacity: Int, host: User, status: CleanUpStatus,
             attendees: [User], meters: Double, created: TimeInterval
         ) -> CleanUp {
-            CleanUp(
-                id: UUID(), title: title, coordinate: jitter(coordinate, meters: meters),
+            counter += 1
+            return CleanUp(
+                id: SeedIDs.cleanUp(counter), title: title, coordinate: jitter(coordinate, meters: meters, seed: counter),
                 beforePhotoURL: DemoPhotos.url(photo), beforeHeading: heading,
                 wasteTypes: waste, severity: severity, estimatedBags: bags,
                 gear: gear(for: waste), hazard: hazard,
@@ -128,10 +133,12 @@ enum Fixtures {
 
     static func seedFeedPosts() -> [FeedPost] {
         let now = Date()
+        var counter = 0
         func post(_ user: User, _ title: String, before: String, after: String, km: Double, kcal: Double,
                   bags: Int, kudos: Int, liked: Bool = false, ago: TimeInterval) -> FeedPost {
-            FeedPost(
-                id: UUID(), activityId: UUID(), authorId: user.id,
+            counter += 1
+            return FeedPost(
+                id: SeedIDs.post(counter), activityId: SeedIDs.feedActivity(counter), authorId: user.id,
                 authorName: user.name, authorAvatarSystemImage: user.avatarSystemImage,
                 cleanUpTitle: title,
                 beforePhotoURL: DemoPhotos.url(before), afterPhotoURL: DemoPhotos.url(after),
@@ -159,11 +166,13 @@ enum Fixtures {
                 return RoutePoint(coordinate: Coordinate(fix.coordinate), timestamp: start.addingTimeInterval(Double(index) * 15))
             }
         }
+        var counter = 0
         func activity(_ title: String, daysAgo: Double, km: Double, minutes: Double, bags: Int, kg: Double,
                       steps: Int, after: String?, before: String? = nil) -> Activity {
             let start = now.addingTimeInterval(-daysAgo * 86_400)
+            counter += 1
             return Activity(
-                id: UUID(), userId: user.id, cleanUpId: nil,
+                id: SeedIDs.activity(counter), userId: user.id, cleanUpId: nil,
                 startedAt: start, endedAt: start.addingTimeInterval(minutes * 60),
                 route: route(distance: km * 1000, at: start),
                 distance: km * 1000, duration: minutes * 60, elevation: 12 + km * 4, kcal: km * 62,
@@ -186,28 +195,67 @@ enum Fixtures {
         ]
     }
 
+    /// Comments on my activities (the ones the inbox mentions) and on a few community posts.
+    static func seedComments() -> [Comment] {
+        let now = Date()
+        func comment(_ index: Int, on target: UUID, _ user: User, _ text: String, ago: TimeInterval) -> Comment {
+            Comment(id: SeedIDs.comment(index), targetId: target, authorId: user.id, authorName: user.name,
+                    text: text, createdAt: now.addingTimeInterval(-ago))
+        }
+        return [
+            comment(1, on: SeedIDs.activity(1), hostB, "Great work! That park looks so much better already.", ago: 2_400),
+            comment(2, on: SeedIDs.activity(1), hostA, "Love seeing the before and after 🙌", ago: 5_000),
+            comment(3, on: SeedIDs.activity(2), hostF, "Count me in for the next one 🙌", ago: 30_000),
+            comment(4, on: SeedIDs.activity(3), hostC, "5 km with 4 bags, that's a serious plog!", ago: 130_000),
+            comment(5, on: SeedIDs.activity(5), hostD, "Love this trail, thanks for cleaning it up!", ago: 420_000),
+            comment(6, on: SeedIDs.feedActivity(1), hostC, "Ocean Beach looks incredible now.", ago: 3_000),
+            comment(7, on: SeedIDs.feedActivity(1), hostA, "Wish I could have joined, next time!", ago: 3_600),
+            comment(8, on: SeedIDs.feedActivity(3), hostE, "That wetland needed this so much.", ago: 90_000),
+        ]
+    }
+
+    /// Who gave an Eco-Boost to which activity (keyed by activity id string).
+    static func seedBoosts() -> [String: [BoosterRef]] {
+        func refs(_ users: [User]) -> [BoosterRef] { users.map { BoosterRef(userId: $0.id, name: $0.name) } }
+        return [
+            SeedIDs.activity(1).uuidString: refs([hostC, hostA, hostD]),
+            SeedIDs.activity(2).uuidString: refs([hostD, hostB]),
+            SeedIDs.activity(3).uuidString: refs([hostA]),
+            SeedIDs.activity(4).uuidString: refs([hostF, hostC]),
+            SeedIDs.feedActivity(1).uuidString: refs([hostC, hostA, User.demo]),
+            SeedIDs.feedActivity(2).uuidString: refs([hostB, hostD]),
+            SeedIDs.feedActivity(3).uuidString: refs([hostA, hostE]),
+        ]
+    }
+
     /// Inbox: likes on my activities, comments, and community reactions, spread over the last week.
     static func seedNotifications() -> [AppNotification] {
         let now = Date()
-        func item(_ kind: NotificationKind, _ actor: User, others: Int = 0, _ subject: String, comment: String? = nil,
+        func item(_ kind: NotificationKind, _ actor: User, others: Int = 0, _ subject: String,
+                  target: NotificationTarget, comment: Int? = nil, text: String? = nil,
                   photo: String? = nil, ago: TimeInterval, read: Bool = false) -> AppNotification {
-            AppNotification(kind: kind, actorName: actor.name, otherActorsCount: others, subject: subject,
-                            commentText: comment, photoURL: photo.flatMap(DemoPhotos.url),
+            AppNotification(kind: kind, target: target, commentID: comment.map(SeedIDs.comment),
+                            actorName: actor.name, otherActorsCount: others, subject: subject,
+                            commentText: text, photoURL: photo.flatMap(DemoPhotos.url),
                             createdAt: now.addingTimeInterval(-ago), isRead: read)
         }
         return [
-            item(.activityLike, hostC, "Morning Clean-Up", photo: "after_park_bridge", ago: 900),
-            item(.comment, hostB, "Morning Clean-Up", comment: "Great work! That park looks so much better already.", photo: "after_park_bridge", ago: 2_400),
-            item(.communityLike, hostA, others: 4, "Beach path clean-up", photo: "before_beach", ago: 5_400),
-            item(.activityLike, hostD, "Riverside sweep", photo: "after_river", ago: 14_000),
-            item(.comment, hostF, "Riverside sweep", comment: "Count me in for the next one 🙌", photo: "after_river", ago: 30_000),
-            item(.communityLike, hostE, others: 11, "Street corner rescue", photo: "before_street", ago: 60_000, read: true),
-            item(.activityLike, hostA, "Evening plog", photo: "after_path", ago: 100_000, read: true),
-            item(.comment, hostC, "Evening plog", comment: "5 km with 4 bags, that's a serious plog!", photo: "after_path", ago: 130_000, read: true),
-            item(.communityLike, hostB, others: 7, "Wetland creek litter", photo: "before_wetland", ago: 220_000, read: true),
-            item(.activityLike, hostF, "Beach path clean-up", photo: "after_beach", ago: 300_000, read: true),
-            item(.comment, hostD, "Trail stewards walk", comment: "Love this trail, thanks for cleaning it up!", photo: "after_trail", ago: 420_000, read: true),
-            item(.activityLike, hostE, "First cleanup", photo: "after_park_bridge", ago: 700_000, read: true),
+            item(.activityLike, hostC, "Morning Clean-Up", target: .activity(SeedIDs.activity(1)), photo: "after_park_bridge", ago: 900),
+            item(.comment, hostB, "Morning Clean-Up", target: .activity(SeedIDs.activity(1)), comment: 1,
+                 text: "Great work! That park looks so much better already.", photo: "after_park_bridge", ago: 2_400),
+            item(.communityLike, hostA, others: 4, "Beach path clean-up", target: .cleanUp(SeedIDs.cleanUp(1)), photo: "before_beach", ago: 5_400),
+            item(.activityLike, hostD, "Riverside sweep", target: .activity(SeedIDs.activity(2)), photo: "after_river", ago: 14_000),
+            item(.comment, hostF, "Riverside sweep", target: .activity(SeedIDs.activity(2)), comment: 3,
+                 text: "Count me in for the next one 🙌", photo: "after_river", ago: 30_000),
+            item(.communityLike, hostE, others: 11, "Street corner rescue", target: .cleanUp(SeedIDs.cleanUp(3)), photo: "before_street", ago: 60_000, read: true),
+            item(.activityLike, hostA, "Evening plog", target: .activity(SeedIDs.activity(3)), photo: "after_path", ago: 100_000, read: true),
+            item(.comment, hostC, "Evening plog", target: .activity(SeedIDs.activity(3)), comment: 4,
+                 text: "5 km with 4 bags, that's a serious plog!", photo: "after_path", ago: 130_000, read: true),
+            item(.communityLike, hostB, others: 7, "Wetland creek litter", target: .cleanUp(SeedIDs.cleanUp(4)), photo: "before_wetland", ago: 220_000, read: true),
+            item(.activityLike, hostF, "Beach path clean-up", target: .activity(SeedIDs.activity(4)), photo: "after_beach", ago: 300_000, read: true),
+            item(.comment, hostD, "Trail stewards walk", target: .activity(SeedIDs.activity(5)), comment: 5,
+                 text: "Love this trail, thanks for cleaning it up!", photo: "after_trail", ago: 420_000, read: true),
+            item(.activityLike, hostE, "First cleanup", target: .activity(SeedIDs.activity(8)), photo: "after_park_bridge", ago: 700_000, read: true),
         ]
     }
 

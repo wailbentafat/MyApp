@@ -1,3 +1,5 @@
 // Shared build settings. Per-developer overrides (signing team, unique bundle-id suffix)
 // go in Local.xcconfig at the repo root, which is not committed. See Local.xcconfig.example.
+// Meta (Facebook) App ID for Instagram Stories sharing. Override in Local.xcconfig.
+INSTAGRAM_APP_ID =
 #include? "../Local.xcconfig"

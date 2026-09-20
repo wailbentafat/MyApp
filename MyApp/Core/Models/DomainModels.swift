@@ -50,7 +50,7 @@ struct User: Identifiable, Codable, Hashable, Sendable {
     }
 
     static let demo = User(
-        id: UUID(),
+        id: UUID(uuidString: "00000000-0000-0000-0000-0000000000AA")!,
         name: "Wail Bentafat",
         avatarSystemImage: "person.crop.circle.fill",
         totals: .init(cleanUpsJoined: 8, bagsCollected: 26, kgCollected: 71, distanceKm: 27.4)

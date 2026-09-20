@@ -4,6 +4,7 @@ import SwiftUI
 struct ProfileView: View {
     @Environment(\.appSession) private var appSession
     @Environment(\.activityRepository) private var activityRepository
+    @Environment(\.demoDataResetter) private var resetter
     @State private var viewModel: ProfileViewModel?
 
     var body: some View {
@@ -16,9 +17,10 @@ struct ProfileView: View {
         .navigationTitle("Me")
         .task {
             guard viewModel == nil else { return }
-            let model = ProfileViewModel(user: appSession.currentUser, activities: activityRepository)
+            let model = ProfileViewModel(user: appSession.currentUser, activities: activityRepository, resetter: resetter)
             viewModel = model
             await model.load()
+            await model.subscribe()
         }
     }
 }
@@ -26,6 +28,7 @@ struct ProfileView: View {
 private struct ProfileContent: View {
     @Bindable var viewModel: ProfileViewModel
     @Environment(\.appSession) private var appSession
+    @State private var confirmReset = false
 
     var body: some View {
         ScrollView {
@@ -60,6 +63,12 @@ private struct ProfileContent: View {
                 settings
             }
             .padding(Eco.Space.l)
+        }
+        .confirmationDialog("Reset all demo data?", isPresented: $confirmReset, titleVisibility: .visible) {
+            Button("Reset", role: .destructive) { Task { await viewModel.resetDemoData() } }
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            Text("Your activities, RSVPs, comments and notifications go back to the sample data.")
         }
         .fullScreenCover(item: $viewModel.selectedActivity) { activity in
             ActivityShareLauncher(activity: activity, onClose: { viewModel.closePreview() })
@@ -102,13 +111,28 @@ private struct ProfileContent: View {
                     "Nearby Clean-Up notifications",
                     isOn: Binding(
                         get: { appSession.notificationsEnabled },
-                        set: { appSession.notificationsEnabled = $0 }
+                        set: { appSession.setNotificationsEnabled($0) }
                     )
                 )
                 .font(.ecoBodyMedium)
                 .foregroundStyle(Eco.textBody)
                 .tint(Eco.primary)
                 .padding(.vertical, Eco.Space.s)
+
+                Divider().overlay(Eco.border)
+
+                Button {
+                    confirmReset = true
+                } label: {
+                    HStack {
+                        Text(viewModel.isResetting ? "Resetting…" : "Reset demo data")
+                        Spacer()
+                    }
+                }
+                .foregroundStyle(Eco.textBody)
+                .font(.ecoBodyMedium)
+                .padding(.vertical, Eco.Space.s)
+                .disabled(viewModel.isResetting)
 
                 Divider().overlay(Eco.border)
 

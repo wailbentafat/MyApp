@@ -18,7 +18,8 @@ final class NotificationsViewModelTests: XCTestCase {
     }
 
     private func item(_ kind: NotificationKind, hoursAgo: Double, read: Bool = false, others: Int = 0) -> AppNotification {
-        AppNotification(kind: kind, actorName: "Maya Chen", otherActorsCount: others, subject: "Riverside sweep",
+        AppNotification(kind: kind, target: .activity(SeedIDs.activity(2)), commentID: nil,
+                        actorName: "Maya Chen", otherActorsCount: others, subject: "Riverside sweep",
                         commentText: kind == .comment ? "Nice!" : nil, photoURL: nil,
                         createdAt: now.addingTimeInterval(-hoursAgo * 3600), isRead: read)
     }

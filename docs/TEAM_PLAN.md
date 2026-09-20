@@ -217,3 +217,16 @@ Both have two L-size engines. P1 is sensor/media-heavy (GPS, HealthKit, Activity
 
 ## 12. Definition of done (per feature)
 Runs on a real device; handles permission-denied, offline and empty states; has a mock/fixture path; uses the design system; merged to `main` with a short PR note; demo-able in under 30 seconds.
+
+
+## 13. Contract changes since the two-person split (P1 → P2 heads-up)
+| Change | Where |
+|---|---|
+| `Activity.title`, `kcalIsEstimated`, `healthWorkoutId`, `beforePhotoURL` (additive, defaulted) | `Core/Models/DomainModels.swift` |
+| `User.demo` has a fixed id (needed for persistence) | `DomainModels.swift` |
+| `ActivityRepository.changes(userId:)`, `FeedService.changes()` (default empty implementations) | `Core/Repositories/RepositoryProtocols.swift` |
+| New `SocialService` (comments + Eco-Boosts), `DemoDataResetting` | `Core/Repositories/SocialService.swift` |
+| New `InboxService` (notification inbox) | `Core/Inbox/` |
+| `FakeBackendService` now persists to JSON (`init(store:seed:persistDelay:latency:)`), implements `SocialService` | `Services/Backend/` |
+| Seeds are deterministic (`SeedIDs`, `SeedData`, `SeedRefresher`) | `Core/Mocks/` |
+| Photos in layouts use `EcoPhoto` (never `scaledToFill` directly: it widens its parent) | `Core/DesignSystem` |

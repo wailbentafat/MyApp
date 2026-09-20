@@ -46,6 +46,23 @@ final class HomeViewModel {
         weeklyStreak = Self.weeklyStreak(activityDates: history.map(\.startedAt), now: now(), calendar: calendar)
     }
 
+    /// Live updates: feed posts and kudos, my activities (streak), and the unread badge.
+    func subscribe() async {
+        await withTaskGroup(of: Void.self) { group in
+            group.addTask { @MainActor in
+                for await updated in self.feed.changes() { self.posts = updated }
+            }
+            group.addTask { @MainActor in
+                for await history in self.activities.changes(userId: self.user.id) {
+                    self.weeklyStreak = Self.weeklyStreak(activityDates: history.map(\.startedAt), now: self.now(), calendar: self.calendar)
+                }
+            }
+            group.addTask { @MainActor in
+                for await items in self.inbox.changes() { self.unreadCount = items.filter { !$0.isRead }.count }
+            }
+        }
+    }
+
     func refreshUnread() async {
         unreadCount = await inbox.unreadCount()
     }
